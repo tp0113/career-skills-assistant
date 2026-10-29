@@ -35,7 +35,7 @@ $rules.Add(@("Anthropic-style key", 'sk-ant-[A-Za-z0-9_\-]{20,}', $true))
 $rules.Add(@("OpenAI-style key", '\bsk-[A-Za-z0-9]{32,}', $true))
 $rules.Add(@("GitHub token", '\bgh[pousr]_[A-Za-z0-9]{30,}', $true))
 $rules.Add(@("AWS access key", '\bAKIA[0-9A-Z]{16}\b', $true))
-$rules.Add(@("API key with a value", '(API_KEY|SECRET|TOKEN)\s*=\s*[^\s#]+', $false))
+$rules.Add(@("API key with a value", '(API_KEY|SECRET|TOKEN)[ \t]*=[ \t]*[^\s#]+', $false))
 $rules.Add(@("absolute home path", '[A-Za-z]:\\Users\\|/Users/[a-z]|/home/[a-z]', $false))
 
 $bannedFiles = @(".env")
