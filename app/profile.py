@@ -7,7 +7,7 @@ import re
 
 from app.data import Catalog
 
-_COURSES = re.compile(r"\b(?:courses?|training|completed|finished|taken|enrol\w*)\b", re.IGNORECASE)
+_COURSES = re.compile(r"\b(?:courses?|classes|class|training|completed|finished|taken|enrol\w*|registered|signed)\b", re.IGNORECASE)
 _SKILLS = re.compile(r"\bskills?\b", re.IGNORECASE)
 
 

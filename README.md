@@ -44,6 +44,7 @@ To use the real model, install [Ollama](https://ollama.com), run `ollama pull ll
 python -m app.cli --employee E01 "What skills should I develop for my next career opportunity?"
 python -m evals.run --real --repeat 3                 # eval cases on the real model, a pass rate per case
                                                       # (exits 1 on any failure; add --report-only to only measure)
+python -m evals.live_users                           # every employee end to end on the real model (a report table)
 python -m evals.route_eval                            # router accuracy: rules only vs rules + embeddings (needs Ollama)
 python -m evals.run --defense off                     # the injection case with the code defenses off
 ```
@@ -81,7 +82,7 @@ PowerShell helpers run with `powershell -ExecutionPolicy Bypass -File scripts/<n
 
 ## Test results
 
-Unit tests: `python -m pytest -q` gives **342 passed** (fake model, no Ollama).
+Unit tests: `python -m pytest -q` gives **428 passed** (fake model, no Ollama).
 
 Evals on the fake model (`python -m evals.run`, saved in
 [evals/results/stub-2026-10-28.md](evals/results/stub-2026-10-28.md)): **13 of 13 PASS**.
