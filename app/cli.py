@@ -17,7 +17,7 @@ from app.llm import get_llm
 
 def _print_result(result: TurnResult, seconds: float) -> None:
     for event in result.events:
-        status = "ok" if event["ok"] else f"ERROR {event['error']}"
+        status = f"ERROR {event['error']}" if not event["ok"] else "too few results" if event.get("too_few") else "ok"
         print(f"[tool] {event['name']} {json.dumps(event['arguments'])} -> {status}")
     for item in result.flagged:
         print(f"[flagged] {item['id']} {item['title']}: {'; '.join(item['reasons'])}")

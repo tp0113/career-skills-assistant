@@ -105,6 +105,16 @@ def test_enroll_called_on_the_advise_route_writes_nothing(store):
     assert store.list_for("E01") == [] and result.pending_enrollment is None
 
 
+def test_a_search_that_leaves_too_few_items_does_not_count_and_the_model_tries_again(store):
+    assistant, stub = make(store, mode="too_few_search")
+    result = assistant.ask("E01", "c1", MAIN)
+    searches = [e for e in result.events if e["name"] == "search_courses"]
+    assert [e["too_few"] for e in searches] == [True, False]
+    tool_texts = [m["content"] for c in stub.calls for m in c["messages"] if m.get("role") == "tool"]
+    assert any(prompts.TOO_FEW_HINT in text for text in tool_texts)
+    assert result.outcome == "ok" and result.usage["model_calls"] == 5
+
+
 # ---- repair ---------------------------------------------------------------------------------
 
 def test_malformed_json_is_repaired_once(store):

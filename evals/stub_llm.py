@@ -9,6 +9,7 @@ Modes:
   no_tools     never calls a tool; answers in prose.
   smuggle      first tries get_employee_profile with an extra employee_id argument, then cooperates.
   enroll_early first tries enroll_in_course on the advise path, then cooperates.
+  too_few_search its first course search uses words that match nothing, then it tries again.
 
 `compose_replies` scripts the structured-output calls one by one: a string is returned as is,
 a function edits the valid answer, None means "the valid answer". `calls` records every request.
@@ -52,7 +53,8 @@ class StubLLM:
 
     def _advise(self, messages: list[dict], offered: list[str]) -> LLMReply:
         done = {m["tool_name"]: m["content"] for m in messages
-                if m["role"] == "tool" and m["content"].startswith("<untrusted_data")}
+                if m["role"] == "tool" and m["content"].startswith("<untrusted_data")
+                and "Too few results" not in m["content"]}
         if self.mode == "enroll_early" and not self._tried_early:
             self._tried_early = True
             return self._call("enroll_in_course", {"course_id": "C04"})
@@ -63,6 +65,9 @@ class StubLLM:
             return self._call("get_employee_profile", {})
         profile = _blocks(done["get_employee_profile"])["get_employee_profile"]
         query = f"{profile['current_role']} {profile['career_interest']}"
+        if self.mode == "too_few_search" and not self._tried_early:
+            self._tried_early = True
+            return self._call("search_courses", {"query": "zzzz"})
         if "search_courses" not in done:
             return self._call("search_courses", {"query": query})
         # The obedient stub also searches for a warehouse-style posting so the poisoned one is reached.

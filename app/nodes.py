@@ -21,6 +21,8 @@ from langgraph.types import interrupt
 PROFILE = "get_employee_profile"
 SEARCHES = ("search_courses", "search_jobs")
 MODEL_ERROR = "model_error"
+# The answer needs 2 to 3 courses and 1 to 2 roles, so a search is only "done" once this many were retrieved.
+MIN_RESULTS = {"search_courses": 2, "search_jobs": 1}
 
 
 def offered_tools(called: list[str]) -> list[str]:
@@ -28,6 +30,12 @@ def offered_tools(called: list[str]) -> list[str]:
     if PROFILE not in called:
         return [PROFILE]
     return list(SEARCHES)
+
+
+def _enough(search: str, ctx: ToolContext) -> bool:
+    """Counts items retrieved so far this turn, across all searches of that kind."""
+    store = ctx.retrieved_courses if search == "search_courses" else ctx.retrieved_jobs
+    return len(store) >= MIN_RESULTS[search]
 
 
 def required_calls_done(called: list[str]) -> bool:
@@ -114,10 +122,13 @@ class Nodes:
         called, profile = list(state["called_tools"]), state["profile"]
         for call in state["pending_calls"]:
             result = execute_tool(call["name"], call["arguments"], session, ctx)
-            messages.append({"role": "tool", "tool_name": call["name"], "content": result.content_for_model})
+            too_few = result.ok and call["name"] in SEARCHES and not _enough(call["name"], ctx)
+            content = result.content_for_model + ("\n" + prompts.TOO_FEW_HINT if too_few else "")
+            messages.append({"role": "tool", "tool_name": call["name"], "content": content})
             events.append({"type": "tool", "name": call["name"], "arguments": call["arguments"],
-                           "ok": result.ok, "error": result.error})
-            if result.ok and call["name"] not in called:
+                           "ok": result.ok, "error": result.error, "too_few": too_few})
+            # A search that leaves too few items does not count: the model must try again with other words.
+            if result.ok and not too_few and call["name"] not in called:
                 called.append(call["name"])
             if result.ok and call["name"] == PROFILE:
                 profile = result.data
