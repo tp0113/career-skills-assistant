@@ -5,7 +5,13 @@ state with one delete. The file looks like {"E01": ["C04"]}.
 """
 import json
 import os
+import threading
 from pathlib import Path
+
+# One lock for the whole process: the API serves requests on several threads, and two confirms at
+# once must not interleave their read-modify-write (measured: without it, parallel adds crash on
+# Windows when both swap in the same temp file). One process only; several workers would need a database.
+_WRITE_LOCK = threading.Lock()
 
 
 class EnrollmentStore:
@@ -18,17 +24,20 @@ class EnrollmentStore:
         return json.loads(self.path.read_text(encoding="utf-8"))
 
     def list_for(self, employee_id: str) -> list[str]:
-        return list(self._read().get(employee_id, []))
+        """Locked too: on Windows the swap in `_write` fails while another thread has the file open."""
+        with _WRITE_LOCK:
+            return list(self._read().get(employee_id, []))
 
     def add(self, employee_id: str, course_id: str) -> bool:
         """Enroll once. Returns False (and writes nothing) if already enrolled."""
-        data = self._read()
-        courses = data.setdefault(employee_id, [])
-        if course_id in courses:
-            return False
-        courses.append(course_id)
-        self._write(data)
-        return True
+        with _WRITE_LOCK:
+            data = self._read()
+            courses = data.setdefault(employee_id, [])
+            if course_id in courses:
+                return False
+            courses.append(course_id)
+            self._write(data)
+            return True
 
     def _write(self, data: dict[str, list[str]]) -> None:
         """Write to a temp file then swap it in, so a crash cannot leave half a file."""
