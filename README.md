@@ -174,6 +174,13 @@ connection first; the default is now `127.0.0.1` with a 5 s connect limit.
 - Synthetic data only: 3 employees, 18 skills, 10 courses, 5 job postings (one is deliberately poisoned).
 - One signed-in employee per conversation, chosen by the caller.
 - Keyword search is enough for a catalog this small, and it is easy to explain.
+- Routing and follow-ups use keyword rules, not the model: they are testable and explainable, at the cost of
+  missing unusual wording.
+- When a follow-up could mean two recommended items, the assistant asks which one instead of guessing.
+- The model runs at temperature 0, but on this GPU its answers are still not exactly repeatable, so real-model
+  numbers are samples.
+- The injection defense is always on in normal use; the reason check and the posting checks are off only in the
+  before/after measurement.
 
 ## Limitations
 
