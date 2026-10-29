@@ -16,6 +16,19 @@ def _lines(title: str, items: list[str]) -> list[str]:
     return [title, *(f"- {shown(item)}" for item in items)] if items else [title, "- none yet"]
 
 
+def profile_card(employee_id: str, catalog: Catalog, enrolled: list[str]) -> dict:
+    """The UI sidebar: the same facts as render_profile, as fields. Only this employee's own record."""
+    me = catalog.employees[employee_id]
+    course = lambda c: {"id": c, "title": shown(catalog.courses[c].title)}  # noqa: E731
+    return {
+        "id": me.id, "name": me.name, "current_role": me.current_role,
+        "career_interest": shown(me.career_interest),
+        "skills": [shown(name) for name in catalog.skill_names(me.skills)],
+        "completed": [course(c) for c in me.completed_courses],
+        "enrolled": [course(c) for c in enrolled if c in catalog.courses],
+    }
+
+
 def render_profile(message: str, employee_id: str, catalog: Catalog, enrolled: list[str]) -> str:
     """The skills section, the courses section, or both, depending on what was asked."""
     me = catalog.employees[employee_id]

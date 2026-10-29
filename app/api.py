@@ -20,6 +20,7 @@ from app.data import load_catalog
 from app.graph import Assistant, TurnResult, UnknownEmployee
 from app.llm import get_llm
 from app.metrics import log_request, metrics_of
+from app.profile import profile_card
 
 WEB_DIST = Path(__file__).resolve().parent.parent / "web" / "dist"
 MAX_MESSAGE_CHARS = 1000
@@ -71,6 +72,13 @@ def create_app(settings: Settings, assistant: Assistant) -> FastAPI:
     @app.get("/api/employees")
     def employees() -> list[dict]:
         return [{"id": e.id, "name": e.name} for e in assistant.catalog.employees.values()]
+
+    @app.get("/api/profile/{employee_id}")
+    def profile(employee_id: str) -> dict:
+        """The sidebar card for the signed-in employee (the picker, as for /api/chat). Not a turn, so not logged."""
+        if employee_id not in assistant.catalog.employees:
+            raise HTTPException(status_code=404, detail="unknown employee")
+        return profile_card(employee_id, assistant.catalog, assistant.store.list_for(employee_id))
 
     @app.post("/api/chat")
     def chat(request: ChatRequest) -> dict:

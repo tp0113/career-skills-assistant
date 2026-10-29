@@ -215,6 +215,25 @@ def test_same_thread_requests_run_one_at_a_time(tmp_path):
     assert later["metrics"]["outcome"] == "ok"
 
 
+def test_profile_card_shows_only_the_signed_in_employees_own_record(env):
+    client, _, log = env
+    card = client.get("/api/profile/E02").json()
+    assert card["name"] == "Marcus Okafor" and card["current_role"] == "Frontend Developer"
+    assert "React" in card["skills"] and card["completed"] == [{"id": "C07", "title": "Prompt Engineering Essentials"}]
+    assert card["enrolled"] == [] and "Priya" not in json.dumps(card) and "Elena" not in json.dumps(card)
+    assert client.get("/api/profile/E99").status_code == 404
+    assert not log.exists()  # reading the sidebar is not a chat turn
+
+
+def test_profile_card_lists_a_new_enrollment(env):
+    client, _, _ = env
+    chat(client)
+    pending = chat(client, message="Enroll me in the first course").json()["pending_enrollment"]
+    client.post("/api/confirm", json={"employee_id": "E01", "conversation_id": "c1",
+                                      "confirm": True, "course_id": pending["course_id"]})
+    assert [c["id"] for c in client.get("/api/profile/E01").json()["enrolled"]] == [pending["course_id"]]
+
+
 def test_stream_handles_the_enroll_pause(env):
     client, store, _ = env
     body = {"employee_id": "E01", "conversation_id": "c1", "message": MAIN}
