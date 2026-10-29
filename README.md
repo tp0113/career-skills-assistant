@@ -63,6 +63,13 @@ PowerShell helpers run with `powershell -ExecutionPolicy Bypass -File scripts/<n
 
 ## Design choices
 
+- **The model does the thinking; code answers lookups.** The model decides which tools to call and with what
+  words, and it writes every recommendation: the 3 skills, 2-3 courses and 1-2 roles with a reason for each
+  (four model calls, about 9 seconds), and it proposes the enrollment. Questions whose answer is already a record
+  ("list my skills", "which courses am I enrolled in", "which skills am I missing", "tell me more about the second
+  course") are answered by code straight from the data, with no model call: a model there could only add mistakes,
+  and the answer is instant. The rule of thumb: judgement and language go to the model, lookups go to code, and
+  the code checks everything the model writes.
 - **Rules in code, not in the prompt.** The server injects the employee id; a deterministic guard
   runs before any model call, so a refused question never reaches the model; only the `enroll`
   node writes, and only after a confirmation that names the same course.
@@ -198,6 +205,9 @@ connection first; the default is now `127.0.0.1` with a 5 s connect limit.
 
 ## Limitations
 
+- **The data is read-only while the app runs.** Skills and completed courses are never changed by the app (enrolling
+  writes only `var/enrollments.json`, and does not add the course's skills). Editing a file in `data/` takes effect after
+  a restart, and a recommendation already saved in an open chat is not refreshed until the next recommendation question.
 - **No real authentication.** The demo chooses the employee; the id is never taken from the model or the message.
 - **`INJECTION_DEFENSE=off` exists only for the before/after run.** Never turn it off in normal use.
 - **The guard is a word list.** Indirect references such as "the person I report to" are not caught. The tools
