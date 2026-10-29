@@ -59,6 +59,11 @@ START -> guard --refuse--> END                     (no model call; polite refusa
   sources that do not support their item are dropped, so the provenance shown is true.
 - **respond**: the friendly message is rendered in code from the validated object, so no
   free model prose reaches the user on this path.
+- **followup** (`app/followup.py`): no model call. Code resolves "the second course", "the first role" or a
+  title word against the saved recommendation, then renders the answer from the data files (the item's
+  description is passed through the injection filter again). A position that does not exist, or an unclear
+  reference, gets a short clarifying question instead of a guess. The saved recommendation is left unchanged,
+  so "enroll me in the first course" still works afterwards.
 - **enroll_agent**: the model is offered only `enroll_in_course(course_id)` and the last
   recommended courses, so it resolves "the second one" to an id. Code checks the id exists,
   is not completed and is not already enrolled. **confirm** calls `interrupt()`; the UI's
@@ -117,6 +122,7 @@ score and matched terms; those ids are the provenance shown in the UI.
    So even a fooled model cannot get a poisoned posting into the output.
 
 `INJECTION_DEFENSE=off` disables layers 2 and 3, only for the before/after comparison.
+`python -m evals.before_after` runs that comparison (E01 and E02, 3 runs per cell, obedient stub or `--real`).
 
 ## Data files (`data/`, synthetic)
 

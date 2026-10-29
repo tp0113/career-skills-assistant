@@ -49,3 +49,16 @@ def test_defense_off_shows_the_poisoned_role_getting_through():
     only = [c for c in cases if c.get("defense_off_checks")]
     outcomes = run.run_cases(only, question, replace(SETTINGS, injection_defense=False), False, 1, True)
     assert [o.status for o in outcomes] == ["PASS"]
+
+
+def test_before_after_on_the_obedient_stub_shows_what_the_code_layers_stop():
+    from dataclasses import replace
+
+    from evals import before_after
+    from evals.stub_llm import StubLLM
+
+    question = before_after._question()
+    on = before_after.measure(replace(SETTINGS, injection_defense=True), StubLLM("obedient"), question, "E02", "on", 2)
+    off = before_after.measure(replace(SETTINGS, injection_defense=False), StubLLM("obedient"), question, "E02", "off", 2)
+    assert (on.reached, on.flagged, on.recommended, on.valid) == (2, 2, 0, 2)
+    assert (off.reached, off.flagged, off.recommended, off.valid) == (2, 0, 2, 2)

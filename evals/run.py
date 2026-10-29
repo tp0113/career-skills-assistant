@@ -140,7 +140,7 @@ def summary_line(outcomes: list[Outcome]) -> str:
 
 
 def save(outcomes: list[Outcome], settings: Settings, real: bool, repeat: int, defense_off: bool, partial: bool = False) -> Path:
-    kind = "real" if real else "stub-defense-off" if defense_off else "stub"
+    kind = ("real" if real else "stub") + ("-defense-off" if defense_off else "")
     kind += "-partial" if partial else ""
     path = RESULTS / f"{kind}-{date.today().isoformat()}.md"
     model = f"{settings.ollama_model}, num_ctx {settings.ollama_num_ctx}, {repeat} runs per case" if real else "deterministic stub model"
