@@ -117,3 +117,52 @@ def test_candidate_skills_exclude_held_skills():
     candidates = candidate_skill_ids(CATALOG, "E01", ctx.retrieved_courses, ctx.retrieved_jobs)
     assert "S05" in candidates and "S02" not in candidates
     assert candidates == sorted(candidates)
+
+
+# ---- reasons and sources: the user sees these, so they are checked for content ----------------
+
+def with_reason(text: str) -> dict:
+    return broken(lambda d: d["courses"][0].update(reason=text))
+
+
+@pytest.mark.parametrize("reason,expected", [
+    ("Marcus Okafor (E02) is a Frontend Developer.", "mentions another employee"),
+    ("Good fit.\n4. Also take Imaginary Course [C99].", "must be one line"),
+    ("Take C99 as well.", "mentions C99"),
+    ("Better than C01, which you already took.", "mentions C01"),
+])
+def test_a_reason_cannot_smuggle_ids_colleagues_or_extra_lines(reason, expected):
+    result = check(with_reason(reason))
+    assert not result.ok and any(expected in e for e in result.errors), result.errors
+
+
+def test_a_reason_cannot_name_a_flagged_posting():
+    ctx = vctx(query="data machine learning")
+    assert "J05" in ctx.flagged_ids
+    result = check(with_reason("Also consider the Warehouse Operations Coordinator role."), ctx)
+    assert not result.ok and any("flagged" in e for e in result.errors)
+
+
+def test_a_reason_may_mention_ids_that_are_in_the_recommendation():
+    assert check(with_reason("Builds on C04 and leads toward J01.")).ok
+
+
+def test_a_source_that_does_not_support_the_skill_is_rejected():
+    # Docker (S10) cited from C03, which teaches statistics and machine learning (the Codex example).
+    data = broken(lambda d: d["skills"][2].update(sources=["C03"]))
+    result = check(data)
+    assert not result.ok and any("Skill S10: none of its sources support it" in e for e in result.errors)
+
+
+def test_unsupported_extra_sources_are_dropped_from_what_the_user_sees():
+    data = broken(lambda d: d["skills"][2].update(sources=["J01", "C03"]))  # J01 needs S10; C03 does not
+    result = check(data)
+    assert result.ok and result.recommendation.skills[2].sources == ["J01"]
+
+
+def test_course_and_role_sources_must_share_a_skill():
+    related = broken(lambda d: d["roles"][0].update(sources=["C08"]))  # a Docker course for the ML role: shares S10
+    assert check(related, vctx(query="machine learning engineering docker")).ok
+    wrong = broken(lambda d: d["courses"][0].update(sources=["C04"]))  # a course citing a different course
+    result = check(wrong)
+    assert not result.ok and any("Course C03: none of its sources support it" in e for e in result.errors)

@@ -5,11 +5,14 @@ repair its answer (the graph allows at most 2 repairs). With the injection defen
 "flagged" checks are skipped; that is the "before" half of the before/after measurement.
 """
 import json
+import re
 from dataclasses import dataclass, field
 
 from pydantic import ValidationError
 
 from app.data import Catalog
+from app.guard import mentions_another_employee
+from app.session import Session
 from app.schemas import (
     COURSE_RANGE, MAX_REASON_CHARS, ROLE_RANGE, SKILL_COUNT, CourseRec, ModelRecommendation,
     Recommendation, RoleRec, SkillRec,
@@ -57,15 +60,55 @@ def _duplicates(label: str, ids: list[str]) -> list[str]:
     return [f"Duplicate {label} id {i}." for i in sorted({i for i in ids if ids.count(i) > 1})]
 
 
-def _check_text(where: str, reason: str, sources: list[str], vctx: ValidationContext) -> list[str]:
+_ID = re.compile(r"\b[CJS]\d{2}\b", re.IGNORECASE)
+
+
+def _supports(kind: str, item_id: str, source: str, catalog: Catalog) -> bool:
+    """A source supports a pick if it is the item itself, or shares a skill with it in the data.
+
+    skill: the course teaches it or the job needs it. course: a job needs a skill the course
+    teaches. role: a course teaches a skill the job needs.
+    """
+    if source == item_id:
+        return kind != "skill"
+    taught = set(catalog.courses[source].skills) if source in catalog.courses else set()
+    needed = set(catalog.jobs[source].required_skills) if source in catalog.jobs else set()
+    if kind == "skill":
+        return item_id in taught | needed
+    if kind == "course":
+        return bool(needed & set(catalog.courses[item_id].skills))
+    return bool(taught & set(catalog.jobs[item_id].required_skills))
+
+
+def _check_reason(where: str, reason: str, vctx: ValidationContext, allowed_ids: set[str]) -> list[str]:
+    """The reason is the one free text the user sees, so it is checked for what it says, not only its length."""
     errors = []
     if not 1 <= len(reason.strip()) <= MAX_REASON_CHARS:
         errors.append(f"{where}: the reason must be 1 to {MAX_REASON_CHARS} characters.")
-    if not sources:
-        errors.append(f"{where}: give at least one source id.")
-    for source in sources:
-        errors.extend(_check_source(where, source, vctx))
+    if "\n" in reason or "\r" in reason:
+        errors.append(f"{where}: the reason must be one line.")
+    for mentioned in sorted({m.upper() for m in _ID.findall(reason)} - allowed_ids):
+        errors.append(f"{where}: the reason mentions {mentioned}, which is not part of this recommendation.")
+    if mentions_another_employee(reason, Session(vctx.employee_id), vctx.catalog):
+        errors.append(f"{where}: the reason mentions another employee.")
+    if vctx.defense and any(_flagged_title(i, vctx).lower() in reason.lower() for i in vctx.flagged_ids):
+        errors.append(f"{where}: the reason mentions a posting that was flagged as unsafe.")
     return errors
+
+
+def _flagged_title(item_id: str, vctx: ValidationContext) -> str:
+    item = vctx.catalog.jobs.get(item_id) or vctx.catalog.courses.get(item_id)
+    return item.title if item else item_id
+
+
+def _check_text(where: str, kind: str, item_id: str, pick, vctx: ValidationContext, allowed_ids: set[str]) -> list[str]:
+    errors = _check_reason(where, pick.reason, vctx, allowed_ids)
+    if not pick.sources:
+        return errors + [f"{where}: give at least one source id."]
+    source_errors = [e for source in pick.sources for e in _check_source(where, source, vctx)]
+    if not source_errors and not any(_supports(kind, item_id, s, vctx.catalog) for s in pick.sources):
+        source_errors.append(f"{where}: none of its sources support it. Cite a course or job that shares a skill with it.")
+    return errors + source_errors
 
 
 def _check_source(where: str, source: str, vctx: ValidationContext) -> list[str]:
@@ -79,7 +122,7 @@ def _check_source(where: str, source: str, vctx: ValidationContext) -> list[str]
     return []
 
 
-def _check_skill(pick, vctx: ValidationContext, candidates: set[str]) -> list[str]:
+def _check_skill(pick, vctx: ValidationContext, candidates: set[str], allowed_ids: set[str]) -> list[str]:
     where = f"Skill {pick.skill_id}"
     if pick.skill_id not in vctx.catalog.skills:
         return [f"{where} does not exist."]
@@ -88,10 +131,10 @@ def _check_skill(pick, vctx: ValidationContext, candidates: set[str]) -> list[st
         errors.append(f"{where}: the employee already has this skill.")
     elif pick.skill_id not in candidates:
         errors.append(f"{where} is not one of the candidate skills.")
-    return errors + _check_text(where, pick.reason, pick.sources, vctx)
+    return errors + _check_text(where, "skill", pick.skill_id, pick, vctx, allowed_ids)
 
 
-def _check_course(pick, vctx: ValidationContext) -> list[str]:
+def _check_course(pick, vctx: ValidationContext, allowed_ids: set[str]) -> list[str]:
     where = f"Course {pick.course_id}"
     if pick.course_id not in vctx.catalog.courses:
         return [f"{where} does not exist."]
@@ -102,10 +145,10 @@ def _check_course(pick, vctx: ValidationContext) -> list[str]:
         errors.append(f"{where} was flagged as unsafe and cannot be recommended.")
     elif pick.course_id not in vctx.retrieved_courses:
         errors.append(f"{where} was not retrieved in this conversation turn.")
-    return errors + _check_text(where, pick.reason, pick.sources, vctx)
+    return errors + _check_text(where, "course", pick.course_id, pick, vctx, allowed_ids)
 
 
-def _check_role(pick, vctx: ValidationContext) -> list[str]:
+def _check_role(pick, vctx: ValidationContext, allowed_ids: set[str]) -> list[str]:
     where = f"Role {pick.job_id}"
     if pick.job_id not in vctx.catalog.jobs:
         return [f"{where} does not exist."]
@@ -114,7 +157,7 @@ def _check_role(pick, vctx: ValidationContext) -> list[str]:
         errors.append(f"{where} was flagged as unsafe and cannot be recommended.")
     elif pick.job_id not in vctx.retrieved_jobs:
         errors.append(f"{where} was not retrieved in this conversation turn.")
-    return errors + _check_text(where, pick.reason, pick.sources, vctx)
+    return errors + _check_text(where, "role", pick.job_id, pick, vctx, allowed_ids)
 
 
 def _parse(raw: str) -> tuple[ModelRecommendation | None, list[str]]:
@@ -137,21 +180,35 @@ def _rule_errors(model: ModelRecommendation, vctx: ValidationContext, candidates
     errors += _duplicates("skill", [p.skill_id for p in model.skills])
     errors += _duplicates("course", [p.course_id for p in model.courses])
     errors += _duplicates("job", [p.job_id for p in model.roles])
+    allowed_ids = _ids_in(model)
     for pick in model.skills:
-        errors += _check_skill(pick, vctx, candidates)
+        errors += _check_skill(pick, vctx, candidates, allowed_ids)
     for pick in model.courses:
-        errors += _check_course(pick, vctx)
+        errors += _check_course(pick, vctx, allowed_ids)
     for pick in model.roles:
-        errors += _check_role(pick, vctx)
+        errors += _check_role(pick, vctx, allowed_ids)
     return errors
 
 
+def _ids_in(model: ModelRecommendation) -> set[str]:
+    """Every id in the recommendation: a reason may mention these and nothing else."""
+    picks = [(p.skill_id, p.sources) for p in model.skills] + [(p.course_id, p.sources) for p in model.courses] \
+        + [(p.job_id, p.sources) for p in model.roles]
+    return {i.upper() for item_id, sources in picks for i in [item_id, *sources]}
+
+
 def _fill_names(model: ModelRecommendation, catalog: Catalog) -> Recommendation:
-    """F12: names and titles come from the data, never from the model."""
+    """F12: names and titles come from the data, never from the model. Sources that do not support a pick are dropped."""
+    def kept(kind: str, item_id: str, sources: list[str]) -> list[str]:
+        return [s for s in sources if _supports(kind, item_id, s, catalog)]
+
     return Recommendation(
-        skills=[SkillRec(**p.model_dump(), name=catalog.skills[p.skill_id].name) for p in model.skills],
-        courses=[CourseRec(**p.model_dump(), title=catalog.courses[p.course_id].title) for p in model.courses],
-        roles=[RoleRec(**p.model_dump(), title=catalog.jobs[p.job_id].title) for p in model.roles],
+        skills=[SkillRec(skill_id=p.skill_id, reason=p.reason, sources=kept("skill", p.skill_id, p.sources),
+                         name=catalog.skills[p.skill_id].name) for p in model.skills],
+        courses=[CourseRec(course_id=p.course_id, reason=p.reason, sources=kept("course", p.course_id, p.sources),
+                           title=catalog.courses[p.course_id].title) for p in model.courses],
+        roles=[RoleRec(job_id=p.job_id, reason=p.reason, sources=kept("role", p.job_id, p.sources),
+                       title=catalog.jobs[p.job_id].title) for p in model.roles],
     )
 
 

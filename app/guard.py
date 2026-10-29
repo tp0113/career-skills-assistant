@@ -74,6 +74,11 @@ def _claims_to_be_other(text: str, others: list[Employee]) -> bool:
     return False
 
 
+def mentions_another_employee(text: str, session: Session, catalog: Catalog) -> bool:
+    """Rule 1 on its own, for checking model-written text (the validator uses it on reasons)."""
+    return _mentions_other_employee(_normalize(text), _others(catalog, session))
+
+
 def check_privacy(message: str, session: Session, catalog: Catalog) -> str | None:
     """Return the refusal text if the message is about another person, else None."""
     text = _normalize(message)

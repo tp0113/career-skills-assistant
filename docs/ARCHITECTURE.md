@@ -13,7 +13,7 @@ All data is synthetic. The default model is a local `llama3.1:8b` served by Olla
 |---|---|
 | An employee only ever sees their own data | `app/guard.py` runs before any model call. No tool has an employee-id parameter; `app/tools.py` reads the id from the server-side session. |
 | Enrollment only after an explicit yes | `app/graph.py`: the enroll proposal pauses on a LangGraph `interrupt()`. Only the `enroll` node writes, and only if the `enrollment_confirmed` flag (set from the confirmation, not by the model) is true for the same course. |
-| Recommendations are real and checked | `app/validate.py`: counts, ids exist, ids were retrieved this turn, completed courses excluded, flagged postings excluded. Titles are filled from the data, not from the model. |
+| Recommendations are real and checked | `app/validate.py`: counts, ids exist, ids were retrieved this turn, completed courses excluded, flagged postings excluded, every source shares a skill with its item, and each reason is one line that names no id outside the recommendation, no other employee and no flagged posting. Titles are filled from the data, not from the model. |
 
 ## Request flow (the graph)
 
@@ -55,7 +55,8 @@ START -> guard --refuse--> END                     (no model call; polite refusa
   retrieved courses and jobs, and the candidate skills (skills required by retrieved jobs or
   taught by retrieved courses that the employee does not have).
 - **validate**: Pydantic parse plus the rule checks above. On failure the errors are sent
-  back to the model (at most 2 repair attempts), then a graceful failure message.
+  back to the model (at most 2 repair attempts), then a graceful failure message. Extra
+  sources that do not support their item are dropped, so the provenance shown is true.
 - **respond**: the friendly message is rendered in code from the validated object, so no
   free model prose reaches the user on this path.
 - **enroll_agent**: the model is offered only `enroll_in_course(course_id)` and the last
