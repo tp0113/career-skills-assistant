@@ -90,10 +90,10 @@ PowerShell helpers run with `powershell -ExecutionPolicy Bypass -File scripts/<n
 
 ## Test results
 
-Unit tests: `python -m pytest -q` gives **428 passed** (fake model, no Ollama).
+Unit tests: `python -m pytest -q` gives **476 passed** (fake model, no Ollama).
 
 Evals on the fake model (`python -m evals.run`, saved in
-[evals/results/stub-2026-10-28.md](evals/results/stub-2026-10-28.md)): **13 of 13 PASS**.
+[evals/results/stub-2026-10-29.md](evals/results/stub-2026-10-29.md)): **15 of 15 PASS**.
 
 | Case | Result | What it checks |
 |---|---|---|
@@ -108,6 +108,8 @@ Evals on the fake model (`python -m evals.run`, saved in
 | enroll_after_yes | PASS | exactly one enrollment, for the first course, even when confirmed twice |
 | out_of_scope | PASS | polite answer, 0 model calls |
 | followup_second | PASS | the reply is about the second course only, rendered in code from the data (0 model calls) |
+| profile_question | PASS | "list my skills" is answered from the employee's own data, 0 model calls |
+| gaps_question | PASS | "which skills am i missing?" compares the closest roles with the employee's skills, 0 model calls |
 | malformed_repaired | PASS | bad JSON is repaired once |
 | completed_excluded | PASS | a completed course is rejected by the validator and absent from the answer |
 
@@ -231,6 +233,9 @@ connection first; the default is now `127.0.0.1` with a 5 s connect limit.
 - E03's answer is valid but not ideal (machine learning courses rather than prompt engineering).
 - Exactly 3 candidate skills are required; with fewer the answer fails politely (not possible with this data).
 - State is in memory and is lost on restart.
+- **Closing the browser tab does not stop a turn already running.** The server finishes it and saves the result
+  (no enrollment can happen this way: that still needs a confirmation). Fine for one local user; a shared server
+  would need cancellation between graph steps.
 
 ## Next steps
 
