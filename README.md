@@ -196,6 +196,10 @@ connection first; the default is now `127.0.0.1` with a 5 s connect limit.
 ## Assumptions
 
 - Synthetic data only: 3 employees, 18 skills, 10 courses, 5 job postings (one is deliberately poisoned).
+- The counts in the brief are exact: 3 skills, 2-3 courses, 1-2 roles. They are one constant each in `app/schemas.py`,
+  read by the prompt and the validator. A skill qualifies only if the employee lacks it and a course or posting found
+  in this turn teaches or needs it. If fewer than 3 qualify, the answer fails politely instead of padding the list
+  (not seen with this data: each employee lacks 14 or 15 of the 18 skills).
 - One signed-in employee per conversation, chosen by the caller.
 - Keyword search is enough for a catalog this small, and it is easy to explain.
 - Routing and follow-ups use keyword rules, not the model: they are testable and explainable, at the cost of
