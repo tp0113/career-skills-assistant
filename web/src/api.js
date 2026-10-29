@@ -9,11 +9,16 @@ async function post(path, body) {
   return response;
 }
 
-export async function getEmployees() {
-  const response = await fetch("/api/employees");
+async function get(path) {
+  const response = await fetch(path);
   if (!response.ok) throw new Error(`The server answered ${response.status}`);
   return response.json();
 }
+
+export const getEmployees = () => get("/api/employees");
+export const getHealth = () => get("/api/health");
+// Only the signed-in employee's own record, for the sidebar.
+export const getProfile = (employeeId) => get(`/api/profile/${encodeURIComponent(employeeId)}`);
 
 // Reads the NDJSON stream: onStatus(toolName) for each tool call, resolves with the final result.
 export async function sendMessage(body, onStatus) {

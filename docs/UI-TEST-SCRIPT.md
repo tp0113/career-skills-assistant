@@ -14,7 +14,9 @@ powershell -ExecutionPolicy Bypass -File scripts/run_demo.ps1       # starts the
 Open http://localhost:8000 and press Ctrl+Shift+R (hard refresh). Ollama must be running (`ollama ps` should list llama3.1:8b).
 Keep F12 -> Console open. **Any red error there is a failure**, even if the page looks fine; copy it.
 
-How to read the metrics line under the chat: `0.0s · 0 model calls` means the answer came straight from the data, with no model.
+How to read a reply: the tag on top says how it was made (`From your data · model not called`, `🛡 Privacy guard · model not called`,
+`Model + tools · checked in code`, `Enrollment · ...`, `✓ Enrolled`), and the chips under it show the cost (`⏱ 0s` `0 model calls`).
+The left sidebar is the signed-in person's own profile; it refreshes after every reply.
 
 Run Part 1, 2 and 3 once for each of the three users. Use the picker at the top right. Switching user clears the chat on purpose.
 
@@ -225,7 +227,7 @@ Pass if: nothing is slower than a second, no colleague's name or skills appear i
 
 Start a fresh chat (switch user and back, or hard refresh). Click the first suggested prompt, `What skills should I develop for my next career opportunity?`
 
-While waiting you should see, one after another: `calling get_employee_profile...`, then `calling search_courses...`, then `calling search_jobs...`.
+While waiting you should see a step list that grows: `Reading your profile`, then `Searching the course catalog`, then `Searching internal roles`; finished steps get a ✓, the current one spins.
 
 | User | Must NOT appear | Notes |
 |---|---|---|
@@ -236,8 +238,8 @@ While waiting you should see, one after another: `calling get_employee_profile..
 Pass if (for each user):
 
 - Three cards under **Skills to develop**, two or three under **Courses**, one or two under **Roles to explore**.
-- Every card has a title, an id in brackets (for example `[C03]`), a one-line reason, and `from ...` sources.
-- The metrics line reads about `9s · 4 model calls`. Up to `7 model calls` is allowed if it needed a repair (then `· N repairs` is shown).
+- Every card has a number, a title, an id chip (for example `C03`), a one-line reason, and `from` source chips. Skills are violet, courses teal, roles amber.
+- The chips read about `⏱ 9s` `4 model calls`. Up to `7 model calls` is allowed if it needed a repair (then an `N repairs` chip is shown).
 - The reasons mention the signed-in person's own situation, never another employee.
 - If you instead see the apology (`I couldn't put together a recommendation I could check...`), that is the known real-model weakness, not a UI bug. Click the prompt again; note how often it happens.
 
@@ -262,7 +264,7 @@ Continue in the chat that has a recommendation.
 | 3 | Click **Decline** | `Okay, I haven't enrolled you in anything.` File still empty for this user |
 | 4 | Type `Enroll me in the first course` again, then type `maybe` | `Okay, I haven't enrolled you in anything.` Anything except an exact yes cancels |
 | 5 | Type `Enroll me in the first course` again, then type `yes but later` | Same cancel message |
-| 6 | Type `Enroll me in the first course` again, then click **Confirm** | `Done. You are enrolled in <title> [id].` |
+| 6 | Type `Enroll me in the first course` again, then click **Confirm** | `Done. You are enrolled in <title> [id].` tagged `✓ Enrolled`, `0 model calls`. The sidebar's **Enrolled** list shows the course with a short green highlight |
 | 7 | Check `var\enrollments.json` | Exactly one entry for this user: that course id |
 | 8 | Type `Which courses am i enrolled in?` | The Block B text, now with that course listed under `Courses you are enrolled in` |
 | 9 | Type `Enroll me in the first course` and click **Confirm** again | `You were already enrolled in <title> [id], so nothing changed.` The file still has that course once |
