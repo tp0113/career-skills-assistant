@@ -233,4 +233,17 @@ connection first; the default is now `127.0.0.1` with a 5 s connect limit.
 
 ## Next steps
 
+What I would build next, roughly in order of value:
+
+- **Skills that change.** Completing a course would add its skills to a per-employee record (kept apart from `data/`),
+  so recommendations and skill gaps change after enrolling. Today the data is read-only while the app runs.
+- **A model-written explanation of skill gaps.** Code already computes what is missing; the model would explain it in
+  the employee's own words, with a check that it only mentions those facts and a fallback to the plain answer.
+- **More examples for the semantic router**, taken from real questions in the request log, and a larger labelled set
+  to measure it (today: 52 messages, 15 of them untouched until the final run).
+- **Real sign-in** instead of the demo picker, and a manager view with consent rules, which needs a design of its own.
+- **Streaming the answer** token by token, and a retry or second opinion when the 8B model fails validation, which is
+  the main reason a recommendation sometimes ends in the apology message.
+- **Housekeeping found while testing:** the privacy guard refuses an employee's own full name with a possessive
+  ("What are Priya Shah's skills?"); it should allow it.
 - Out of scope: a second, cooperating agent.
