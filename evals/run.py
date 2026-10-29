@@ -3,6 +3,7 @@
   python -m evals.run                      stub model, exits 1 on any failure
   python -m evals.run --real --repeat 3    the cases tagged "real" on the configured model, a pass rate per case
   python -m evals.run --defense off        the injection case with the code layers off (shows what they stop)
+  python -m evals.run --real --case poisoned_posting   only the named case(s); results are saved under a "-partial" name
 
 Each run gets its own temporary enrollment file and conversation id, so cases never share state.
 A case with "expected_fail" is a known gap: it shows as XFAIL and does not fail the run, but if it
@@ -138,8 +139,9 @@ def summary_line(outcomes: list[Outcome]) -> str:
     return text + "".join(f", {n} {s}" for s, n in counts.items() if s != "PASS" and n)
 
 
-def save(outcomes: list[Outcome], settings: Settings, real: bool, repeat: int, defense_off: bool) -> Path:
+def save(outcomes: list[Outcome], settings: Settings, real: bool, repeat: int, defense_off: bool, partial: bool = False) -> Path:
     kind = "real" if real else "stub-defense-off" if defense_off else "stub"
+    kind += "-partial" if partial else ""
     path = RESULTS / f"{kind}-{date.today().isoformat()}.md"
     model = f"{settings.ollama_model}, num_ctx {settings.ollama_num_ctx}, {repeat} runs per case" if real else "deterministic stub model"
     path.parent.mkdir(exist_ok=True)
@@ -153,6 +155,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--real", action="store_true", help="run the cases tagged real on the configured model")
     parser.add_argument("--repeat", type=int, default=3, help="runs per case with --real (default 3)")
     parser.add_argument("--defense", choices=["on", "off"], default="on", help="off: injection case only, layers 2-3 off")
+    parser.add_argument("--case", action="append", help="run only this case id (repeatable)")
     args = parser.parse_args(argv)
 
     settings = load_settings()
@@ -162,11 +165,16 @@ def main(argv: list[str] | None = None) -> int:
     main_question, cases = load_cases()
     if defense_off:
         cases = [c for c in cases if c.get("defense_off_checks")]
+    if args.case:
+        unknown = set(args.case) - {c["id"] for c in cases}
+        if unknown:
+            parser.error(f"unknown case id(s): {sorted(unknown)}")
+        cases = [c for c in cases if c["id"] in args.case]
     print(f"Running {'real model ' + settings.ollama_model if args.real else 'stub model'}:")
     outcomes = run_cases(cases, main_question, settings, args.real, args.repeat, defense_off)
     print("\n" + render_table(outcomes, args.real))
     print("\n" + summary_line(outcomes))
-    print(f"saved {save(outcomes, settings, args.real, args.repeat, defense_off)}")
+    print(f"saved {save(outcomes, settings, args.real, args.repeat, defense_off, bool(args.case))}")
     # A real run reports honestly and does not fail the command; the stub run is the gate.
     return 0 if args.real else int(any(o.is_bad for o in outcomes))
 

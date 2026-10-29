@@ -174,6 +174,60 @@ def test_obedient_model_does_recommend_it_with_defense_off(store):
     assert result.recommendation["roles"][0]["job_id"] == "J05"
 
 
+# ---- follow-ups -----------------------------------------------------------------------------
+
+def test_followup_names_the_second_course_from_data_with_no_model_call(store):
+    assistant, stub = make(store)
+    courses = recommended(assistant)
+    calls_before = len(stub.calls)
+    result = assistant.ask("E01", "c1", "Tell me more about the second course")
+    second = CATALOG.courses[courses[1]["course_id"]]
+    assert result.route == "followup" and result.outcome == "followup"
+    assert len(stub.calls) == calls_before
+    assert second.title in result.reply and second.description in result.reply
+    assert [c for c in courses if CATALOG.courses[c["course_id"]].title in result.reply] == [courses[1]]
+
+
+def test_followup_keeps_the_saved_recommendation_for_a_later_enroll(store):
+    assistant, _ = make(store)
+    courses = recommended(assistant)
+    assistant.ask("E01", "c1", "Tell me more about the first course")
+    assert assistant.ask("E01", "c1", ENROLL_FIRST).pending_enrollment["course_id"] == courses[0]["course_id"]
+
+
+def test_followup_about_a_role_says_which_skills_are_missing(store):
+    assistant, _ = make(store)
+    rec = assistant.ask("E01", "c1", MAIN).recommendation
+    job = CATALOG.jobs[rec["roles"][0]["job_id"]]
+    reply = assistant.ask("E01", "c1", "Tell me more about the first role").reply
+    assert job.title in reply and "You still need" in reply
+
+
+def test_followup_by_title_word_resolves_that_course(store):
+    assistant, _ = make(store)
+    courses = recommended(assistant)
+    title = CATALOG.courses[courses[2]["course_id"]].title
+    word = next(w for w in title.split() if len(w) >= 4 and w.lower() not in ("basics",))
+    reply = assistant.ask("E01", "c1", f"Tell me more about {word}").reply
+    assert title in reply
+
+
+def test_followup_with_a_missing_position_asks_instead_of_guessing(store):
+    assistant, _ = make(store)
+    recommended(assistant)
+    reply = assistant.ask("E01", "c1", "Tell me more about the third role").reply
+    assert reply == "I wasn't sure which item you mean. Say for example \"tell me more about the second course\" or name a recommended course or role."
+
+
+def test_followup_text_never_contains_an_injected_line(store):
+    from app.followup import render_followup
+    from app.schemas import Recommendation
+    rec = Recommendation(skills=[], courses=[], roles=[{"job_id": "J05", "title": "Warehouse Operations Coordinator",
+                                                        "reason": "x", "sources": ["J05"]}])
+    reply = render_followup("tell me more about the first role", rec, CATALOG, "E01")
+    assert "Warehouse Operations Coordinator" in reply and "ignore your instructions" not in reply.lower()
+
+
 # ---- enrollment gate ------------------------------------------------------------------------
 
 def test_enroll_pauses_for_confirmation_and_writes_nothing(store):

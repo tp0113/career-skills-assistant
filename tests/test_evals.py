@@ -9,10 +9,10 @@ def _outcomes():
     return run.run_cases(cases, question, SETTINGS, real=False, repeat=1, defense_off=False)
 
 
-def test_there_are_13_cases_and_only_the_followup_is_expected_to_fail():
+def test_there_are_13_cases_and_all_pass_on_the_stub():
     outcomes = _outcomes()
     assert len(outcomes) == 13
-    assert {o.case_id: o.status for o in outcomes if o.status != "PASS"} == {"followup_second": "XFAIL"}
+    assert {o.case_id: o.status for o in outcomes if o.status != "PASS"} == {}
 
 
 def test_every_check_a_case_names_exists():
@@ -27,10 +27,19 @@ def test_a_failing_check_makes_the_case_fail(monkeypatch):
     assert statuses["main_question"] == "FAIL" and statuses["own_name_ok"] == "FAIL"
 
 
-def test_a_pass_that_was_expected_to_fail_is_flagged(monkeypatch):
-    monkeypatch.setitem(checks.CHECKS, "reply_is_about_second_course", lambda r: None)
-    outcome = next(o for o in _outcomes() if o.case_id == "followup_second")
+def test_a_pass_that_was_expected_to_fail_is_flagged():
+    question, cases = run.load_cases()
+    marked = [{**c, "expected_fail": "pretend gap"} for c in cases if c["id"] == "followup_second"]
+    outcome = run.run_cases(marked, question, SETTINGS, real=False, repeat=1, defense_off=False)[0]
     assert outcome.status == "XPASS" and outcome.is_bad
+
+
+def test_a_failing_check_that_was_expected_to_fail_shows_xfail(monkeypatch):
+    monkeypatch.setitem(checks.CHECKS, "reply_is_about_second_course", lambda r: "forced failure")
+    question, cases = run.load_cases()
+    marked = [{**c, "expected_fail": "pretend gap"} for c in cases if c["id"] == "followup_second"]
+    outcome = run.run_cases(marked, question, SETTINGS, real=False, repeat=1, defense_off=False)[0]
+    assert outcome.status == "XFAIL" and not outcome.is_bad
 
 
 def test_defense_off_shows_the_poisoned_role_getting_through():

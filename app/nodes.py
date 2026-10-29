@@ -7,6 +7,7 @@ from app import prompts
 from app.confirmation import answer_is_yes
 from app.data import Catalog
 from app.enrollments import EnrollmentStore
+from app.followup import render_followup
 from app.guard import check_privacy
 from app.llm import LLM, LLMError, LLMReply
 from app.render import render_enroll_question, render_enrolled, render_recommendation
@@ -92,6 +93,12 @@ class Nodes:
 
     def out_of_scope(self, state: State) -> dict:
         return {"reply": prompts.OUT_OF_SCOPE, "outcome": "out_of_scope"}
+
+    def followup(self, state: State) -> dict:
+        """Answer "tell me more about X" from the saved recommendation and the data. No model call."""
+        rec = Recommendation.model_validate(state["recommendation"])
+        reply = render_followup(state["user_message"], rec, self.catalog, state["employee_id"])
+        return {"reply": reply, "outcome": "followup"}
 
     def tool_fallback(self, state: State) -> dict:
         return {"reply": prompts.TOOL_FALLBACK, "outcome": "tool_fallback"}
@@ -264,8 +271,7 @@ def after_guard(state: State) -> str:
 
 
 def after_route(state: State) -> str:
-    # FOLLOWUP shares the advise path until the follow-up node is built (phase 5).
-    return {ENROLL: "enroll_agent", ADVISE: "advise_agent", FOLLOWUP: "advise_agent", OUT_OF_SCOPE: "out_of_scope"}[state["route"]]
+    return {ENROLL: "enroll_agent", ADVISE: "advise_agent", FOLLOWUP: "followup", OUT_OF_SCOPE: "out_of_scope"}[state["route"]]
 
 
 def after_agent(state: State) -> str:
