@@ -234,6 +234,14 @@ def test_profile_card_lists_a_new_enrollment(env):
     assert [c["id"] for c in client.get("/api/profile/E01").json()["enrolled"]] == [pending["course_id"]]
 
 
+def test_the_page_is_never_served_from_cache(env):
+    """After a rebuild the browser kept the old index.html (and so the old bundle). Assets are hashed, so only
+    the page itself must be revalidated."""
+    client, _, _ = env
+    assert client.get("/").headers.get("cache-control") == "no-cache"
+    assert "no-cache" not in client.get("/api/health").headers.get("cache-control", "")
+
+
 def test_stream_handles_the_enroll_pause(env):
     client, store, _ = env
     body = {"employee_id": "E01", "conversation_id": "c1", "message": MAIN}

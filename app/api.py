@@ -49,6 +49,14 @@ def _payload(result: TurnResult, metrics: dict) -> dict:
 def create_app(settings: Settings, assistant: Assistant) -> FastAPI:
     app = FastAPI(title="Career skills assistant")
 
+    @app.middleware("http")
+    async def page_not_cached(request, call_next):
+        """The page names the current hashed bundle, so a cached copy after a rebuild runs old code."""
+        response = await call_next(request)
+        if not request.url.path.startswith(("/api/", "/assets/")):
+            response.headers["Cache-Control"] = "no-cache"
+        return response
+
     def run_turn(employee_id: str, turn: Callable[[], TurnResult]) -> dict:
         """Time a turn, log one line, shape the response. An unknown employee is a 404; any other failure is
         logged as outcome "error" and answered with a fixed text, so no internal detail reaches the browser."""
