@@ -52,6 +52,14 @@ def _add_usage(usage: dict, reply: LLMReply) -> dict:
     }
 
 
+def _shown_arguments(call: dict, ok: bool):
+    """Events go to the CLI and later the UI. A rejected call shows only its argument names, not the values."""
+    if ok:
+        return call["arguments"]
+    args = call["arguments"]
+    return sorted(args) if isinstance(args, dict) else "<not a JSON object>"
+
+
 def _assistant_message(reply: LLMReply) -> dict:
     """The assistant turn as Ollama wants to see it again: arguments as an object."""
     calls = [
@@ -127,7 +135,7 @@ class Nodes:
             if too_few:
                 hint = prompts.too_few_hint(self._missing_skill_names(state["employee_id"]))
                 messages.append({"role": "user", "content": hint})
-            events.append({"type": "tool", "name": call["name"], "arguments": call["arguments"],
+            events.append({"type": "tool", "name": call["name"], "arguments": _shown_arguments(call, result.ok),
                            "ok": result.ok, "error": result.error, "too_few": too_few})
             # A search that leaves too few items does not count: the model must try again with other words.
             if result.ok and not too_few and call["name"] not in called:
@@ -207,7 +215,8 @@ class Nodes:
         call = reply.tool_calls[0]
         ctx = ToolContext(catalog=self.catalog, defense=self.defense, offered=frozenset({"enroll_in_course"}))
         result = execute_tool(call["name"], call["arguments"], Session(state["employee_id"]), ctx)
-        event = {"type": "tool", "name": call["name"], "arguments": call["arguments"], "ok": result.ok, "error": result.error}
+        event = {"type": "tool", "name": call["name"], "arguments": _shown_arguments(call, result.ok),
+                 "ok": result.ok, "error": result.error}
         if not result.ok:
             return {**update, "events": [event], "reply": prompts.ENROLL_CLARIFY, "outcome": "enroll_clarify"}
         course_id = result.data["proposed_course_id"]

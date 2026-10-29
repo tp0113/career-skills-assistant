@@ -39,6 +39,13 @@ def test_smuggled_employee_id_is_rejected(name, good):
     assert not result.ok and "employee_id" in result.error
 
 
+def test_a_rejected_call_does_not_echo_the_values_it_was_given():
+    result = execute_tool("get_employee_profile", {"employee_id": "E02", "name": "Marcus Okafor"}, E01, ctx())
+    assert not result.ok and "employee_id" in result.error and "name" in result.error
+    for value in ("E02", "Marcus", "Okafor"):
+        assert value not in result.error and value not in result.content_for_model
+
+
 def test_unknown_tool_rejected():
     result = execute_tool("delete_everything", {}, E01, ctx())
     assert not result.ok and "unknown tool" in result.error

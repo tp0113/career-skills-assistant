@@ -89,9 +89,9 @@ def test_smuggled_employee_id_gets_an_error_and_no_other_data(store):
     result = assistant.ask("E01", "c1", MAIN)
     first = result.events[0]
     assert first["name"] == "get_employee_profile" and not first["ok"] and "employee_id" in first["error"]
+    assert first["arguments"] == ["employee_id"]  # names only: the rejected value is not shown
     assert result.outcome == "ok"  # the model recovered after the error message
     dump = json.dumps(assistant.state_of("E01", "c1"))
-    # The rejected attempt itself is logged (it contains the text "E02"), but none of E02's data is.
     for secret in ("Marcus", "Okafor", "Frontend Developer", "Elena", "Petrova", "Build AI-powered"):
         assert secret not in dump
     assert assistant.state_of("E01", "c1")["profile"]["name"] == "Priya Shah"

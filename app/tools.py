@@ -96,6 +96,13 @@ def _parse_args(raw_args: dict | str | None) -> dict:
     return parsed
 
 
+def _field_errors(exc: ValidationError) -> str:
+    """Field names and rule messages only. Pydantic's default text repeats the rejected values,
+    so a smuggled name or id would be echoed back into the prompt, the events and the CLI."""
+    return "; ".join(f"{'.'.join(str(p) for p in e['loc']) or 'arguments'}: {e['msg']}"
+                     for e in exc.errors(include_input=False, include_url=False))
+
+
 def _profile(session: Session, ctx: ToolContext) -> ToolResult:
     emp = ctx.catalog.employees[session.employee_id]
     return _wrap("get_employee_profile", {
@@ -161,8 +168,10 @@ def execute_tool(name: str, raw_args: dict | str | None, session: Session, ctx: 
         return _fail(f"tool '{name}' is not available right now")
     try:
         args = TOOLS[name][1].model_validate(_parse_args(raw_args))
-    except (ValueError, ValidationError) as exc:
-        return _fail(f"bad arguments for {name}: {exc}")
+    except ValidationError as exc:
+        return _fail(f"bad arguments for {name}: {_field_errors(exc)}")
+    except ValueError:
+        return _fail(f"bad arguments for {name}: arguments must be a JSON object")
     if name == "get_employee_profile":
         return _profile(session, ctx)
     if name == "enroll_in_course":
