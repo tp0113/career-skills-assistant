@@ -14,7 +14,7 @@ It runs locally with `llama3.1:8b` through Ollama. All data is synthetic (3 empl
 
 ## Run it
 
-Needs Python 3.11+, [Ollama](https://ollama.com), and Node 18+ for the first UI build.
+Needs Python 3.11+, [Ollama](https://ollama.com) (installed and running), and Node 18+ for the first UI build.
 
 ```
 ollama pull llama3.1:8b
@@ -28,6 +28,10 @@ powershell -ExecutionPolicy Bypass -File scripts/run_demo.ps1
 Then open http://localhost:8000. Pick an employee at the top right (E01 Priya Shah, E02 Marcus Okafor,
 E03 Elena Petrova, all fictional). To try it without a model:
 `python -m app.cli --stub --employee E01 "What skills should I develop for my next career opportunity?"`
+
+On macOS/Linux, build the UI once (`cd web && npm install && npm run build`), then start the server with
+`uvicorn app.api:app --port 8000`. To clear saved demo enrollments, run `scripts/reset_demo.ps1`
+(or delete `var/enrollments.json`). `scripts/check_laptop.ps1` prints tool versions, GPU state and model speed.
 
 ## Run the tests
 
@@ -53,6 +57,18 @@ Full design: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
   quarantined. Turning that defense off makes the model recommend it (5 of 6 runs), with it on, 0 of 6.
 - **Keyword retrieval** with scores and matched terms, so every recommendation shows where it came from.
 - **`num_ctx` 8192 on every request.** The 32K default spills to the CPU on an 8 GB GPU.
+
+## Assumptions
+
+- **Built and tested on Windows 11** with an NVIDIA RTX 4060 laptop GPU (8 GB). The helper scripts are PowerShell.
+- **Speed depends on the GPU.** A recommendation takes about 9-10 s there (about 42-53 tokens/s, model fully on the GPU).
+  On slower hardware, or if the model spills to the CPU (measured about 10 tokens/s), expect much longer waits.
+- Synthetic data only. The counts are exactly 3 skills, 2-3 courses and 1-2 roles, as the brief says.
+- One signed-in employee per conversation, chosen by the caller (a demo picker, not real sign-in).
+- Keyword search is enough for a catalog this small, and it is easy to explain.
+- The model runs at temperature 0, but answers are still not exactly repeatable on this GPU, so real-model
+  numbers are samples.
+- When a follow-up could mean two recommended items, the assistant asks which one instead of guessing.
 
 ## Limitations
 
