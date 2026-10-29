@@ -1,0 +1,27 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; background: #f4f5f7; color: #1d2230; }
+.app { max-width: 760px; margin: 0 auto; height: 100vh; display: flex; flex-direction: column; padding: 12px; gap: 8px; }
+header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+h1 { font-size: 1.2rem; margin: 0; }
+.picker { display: flex; gap: 8px; align-items: center; font-size: 0.9rem; }
+.log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 8px; background: #fff; border-radius: 8px; }
+.hint { color: #6b7280; text-align: center; margin-top: 2rem; }
+.bubble { padding: 8px 12px; border-radius: 10px; max-width: 90%; }
+.bubble p { margin: 0; white-space: pre-wrap; }
+.bubble.user { align-self: flex-end; background: #2563eb; color: #fff; }
+.bubble.assistant { align-self: flex-start; background: #eef0f4; }
+.bubble.status { align-self: flex-start; color: #6b7280; font-style: italic; }
+.bubble.error { align-self: center; background: #fde8e8; color: #9b1c1c; }
+.note { font-size: 0.85rem; color: #92400e; margin-top: 6px; }
+.cards { display: grid; gap: 8px; margin-top: 8px; }
+.card { background: #fff; border: 1px solid #d5d9e2; border-radius: 8px; padding: 8px 10px; }
+.card h3 { margin: 0 0 4px; font-size: 1rem; }
+.card p { margin: 0 0 4px; }
+.confirm { display: flex; gap: 8px; margin-top: 8px; }
+.prompts { display: flex; gap: 6px; flex-wrap: wrap; }
+.input { display: flex; gap: 8px; }
+.input input { flex: 1; padding: 8px; border: 1px solid #c3c8d4; border-radius: 6px; font: inherit; }
+button { padding: 6px 12px; border: 0; border-radius: 6px; background: #2563eb; color: #fff; font: inherit; cursor: pointer; }
+button.secondary { background: #e3e6ee; color: #1d2230; }
+button:disabled { opacity: 0.5; cursor: default; }
+.metrics { margin: 0; min-height: 1.2em; font-size: 0.8rem; color: #6b7280; }
