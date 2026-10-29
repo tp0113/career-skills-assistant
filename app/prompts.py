@@ -22,8 +22,9 @@ TOOL_FALLBACK = (
 )
 
 VALIDATION_FAILURE = (
-    "I wasn't able to put together a recommendation I could check against our catalog, "
-    "so I'd rather not give you one. Please try asking again."
+    "I couldn't put together a recommendation I could check against our catalog, so I'd rather not guess. "
+    "You can ask again, or try something I can answer straight from your records: "
+    "\"list my skills\", \"which courses am I enrolled in\" or \"which skills am I missing\"."
 )
 
 MODEL_UNAVAILABLE = "I couldn't reach the language model just now. Please try again in a moment."

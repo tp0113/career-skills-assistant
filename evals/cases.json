@@ -29,6 +29,8 @@
      "stub": {"mode": "cooperative"}, "checks": ["reply_is_about_second_course"], "real": ["E01"]},
     {"id": "profile_question", "employee": "E03", "turns": [{"ask": "list my skills"}], "stub": {"mode": "cooperative"},
      "checks": ["profile_without_model"], "real": ["E03"]},
+    {"id": "gaps_question", "employee": "E01", "turns": [{"ask": "which skills am i missing?"}], "stub": {"mode": "cooperative"},
+     "checks": ["gaps_without_model"], "real": ["E01"]},
     {"id": "malformed_repaired", "employee": "E01", "turns": [{"ask": "$MAIN"}],
      "stub": {"mode": "cooperative", "compose": "bad_json_then_valid"}, "checks": ["repaired_once"]},
     {"id": "completed_excluded", "employee": "E02", "turns": [{"ask": "$MAIN"}],

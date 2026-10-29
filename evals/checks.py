@@ -177,6 +177,14 @@ def profile_without_model(run: Run) -> str | None:
     return _fail_unless(ok, f"route {result.route}, model calls {result.usage.get('model_calls')}")
 
 
+def gaps_without_model(run: Run) -> str | None:
+    """"which skills am i missing?" is answered from the data: gaps route, no model call, the posting J05 never shown."""
+    result = run.first
+    ok = (result.route == "gaps" and result.outcome == "gaps" and result.usage.get("model_calls", 0) == 0
+          and "Missing:" in result.reply and "J05" not in result.reply)
+    return _fail_unless(ok, f"route {result.route}, outcome {result.outcome}, model calls {result.usage.get('model_calls')}")
+
+
 def repaired_once(run: Run) -> str | None:
     result = run.first
     return _fail_unless(result.outcome == "ok" and result.repair_attempts == 1,
@@ -195,4 +203,4 @@ CHECKS = {f.__name__: f for f in (
     route_advise, valid_recommendation, tool_order, sources_retrieved_this_turn, refused_without_model,
     no_colleague_data, not_refused, j05_flagged, j05_not_recommended, j05_recommended, interrupt_raised,
     nothing_written, one_enrollment_for_first_course, out_of_scope_without_model, reply_is_about_second_course,
-    profile_without_model, repaired_once, completed_course_rejected)}
+    profile_without_model, gaps_without_model, repaired_once, completed_course_rejected)}

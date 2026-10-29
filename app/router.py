@@ -13,6 +13,7 @@ FOLLOWUP = "followup"
 ADVISE = "advise"
 OUT_OF_SCOPE = "out_of_scope"
 PROFILE = "profile"
+GAPS = "gaps"
 
 _ENROLL = re.compile(r"\b(?:enrol{1,2}|sign\s+me\s+up|register\s+me|sign\s+up\s+for)\b", re.IGNORECASE)
 # "the second course", "that one", "the last machine learning course": a position, then the item word
@@ -40,9 +41,11 @@ _LIST_START = re.compile(r"^\W*(?:please\s+)?(?:list|show|display|what(?:'s|\s+a
 # The own-data phrase must end the message ("... my course?"), so "the weather on the last day of my course" is not one.
 _OWN_DATA = re.compile(
     r"(?:\bmy\s+(?:current\s+|completed\s+)?(?:skills?|courses?|training|profile)(?:\s+and\s+(?:my\s+)?(?:skills?|courses?))?"
-    r"|\b(?:skills?|courses?)\s+(?:do\s+|have\s+)?i\s+(?:have|know|completed|finished|taken)"
-    r"|\bwhat\s+have\s+i\s+(?:completed|taken|finished))"
-    r"(?:\s+(?:so\s+far|currently|now|please))*\W*$",
+    r"|\bmy\s+enrol\w+"
+    r"|\b(?:skills?|courses?)\s+(?:do\s+|have\s+|am\s+)?i\s+(?:have|know|completed|finished|taken|enrolled|signed\s+up|registered)"
+    r"|\b(?:have|am)\s+i\s+(?:completed|taken|finished|enrolled|signed\s+up|registered)"
+    r"|\bdo\s+i\s+know)"
+    r"(?:\s+(?:so\s+far|currently|now|please|in|for|on))*\W*$",
     re.IGNORECASE,
 )
 # The list word must come straight before the own-data phrase: "what is the weather on the last day of my course" fails.
@@ -51,6 +54,12 @@ _PROFILE_FORM = re.compile(_LIST_START.pattern + r"\s+(?:the\s+|all\s+)?" + _OWN
 _WANTS_ADVICE = re.compile(
     r"\b(?:recommend\w*|suggest\w*|should|next|improve\w*|develop\w*|learn\w*|grow\w*|career|promotion|"
     r"missing|lack\w*|need\w*|fit|best|new|role|job)s?\b",
+    re.IGNORECASE,
+)
+# "which skills am I missing", "what do I lack", "my skill gaps": answered from the data, not by the model.
+_GAPS = re.compile(
+    r"\b(?:skills?\s+(?:am\s+i|do\s+i)\s+(?:missing|lack\w*)|(?:am\s+i|do\s+i)\s+(?:missing|lack)"
+    r"|(?:my\s+)?skills?\s+gaps?|gaps?\s+in\s+my\s+skills?|what\s+am\s+i\s+missing)\b",
     re.IGNORECASE,
 )
 # Title words too common to identify one recommended item.
@@ -87,6 +96,8 @@ def _first_person(message: str, own_names: tuple[str, ...]) -> str:
 def route_message(message: str, recommendation: Recommendation | None = None, own_names: tuple[str, ...] = ()) -> str:
     if _ENROLL.search(message):
         return ENROLL
+    if _GAPS.search(message):
+        return GAPS
     if _is_profile_question(_first_person(message, own_names)):
         return PROFILE
     if _is_followup(message, recommendation):

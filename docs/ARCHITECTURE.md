@@ -24,6 +24,7 @@ START -> guard --refuse--> END                     (no model call; polite refusa
          route --out_of_scope--> END               (canned graceful answer)
            |------followup-----> followup -> END   (resolves "the second course" from state)
            |------profile------> profile -> END    ("list my skills", from the employee's own data)
+           |------gaps---------> gaps -> END       ("which skills am I missing", from the data)
            |------enroll-------> enroll_agent -> confirm (interrupt) -> enroll -> END
            |                                          '--declined--> END
            v
@@ -64,6 +65,9 @@ START -> guard --refuse--> END                     (no model call; polite refusa
   sources that do not support their item are dropped, so the provenance shown is true.
 - **respond**: the friendly message is rendered in code from the validated object, so no
   free model prose reaches the user on this path.
+- **gaps** (`app/gaps.py`): no model call. Takes the roles closest to the employee's career interest (the same keyword
+  search, skipping flagged postings and roles that match much less than the best one), and shows which required skills
+  they have and lack, plus up to 3 not-yet-completed courses that teach the missing ones.
 - **profile** (`app/profile.py`): no model call. Lists the signed-in employee's skills, completed courses and
   enrolled courses from the data files and the enrollment store.
 - **followup** (`app/followup.py`): no model call. Code resolves the item against the saved recommendation:

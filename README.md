@@ -29,7 +29,7 @@ python -m venv .venv
 .venv\Scripts\activate          # macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 python -m pytest -q                                   # unit tests, fake model, no Ollama needed
-python -m evals.run                                   # the 14 eval cases on the fake model
+python -m evals.run                                   # the 15 eval cases on the fake model
 python -m app.cli --stub --employee E01 "What skills should I develop for my next career opportunity?"
 ```
 
@@ -76,7 +76,7 @@ PowerShell helpers run with `powershell -ExecutionPolicy Bypass -File scripts/<n
 
 ## Test results
 
-Unit tests: `python -m pytest -q` gives **303 passed** (fake model, no Ollama).
+Unit tests: `python -m pytest -q` gives **320 passed** (fake model, no Ollama).
 
 Evals on the fake model (`python -m evals.run`, saved in
 [evals/results/stub-2026-10-28.md](evals/results/stub-2026-10-28.md)): **13 of 13 PASS**.
@@ -203,7 +203,7 @@ connection first; the default is now `127.0.0.1` with a 5 s connect limit.
 - **Follow-up and routing are keyword rules.** "Tell me more about the machine learning course" when two
   recommended courses share those words gets a clarifying question, not a guess. A question that mentions a course
   but is not about the recommendation ("the weather on the last day of my course") goes to the advise path.
-- **"List my skills" is a keyword rule too.** Plain phrasings ("list my skills", "what are my courses", "what have I completed") are answered from the data with no model call. Other wording ("which skills am I missing") goes to the advise path.
+- **"List my skills" is a keyword rule too.** Plain phrasings ("list my skills", "what are my courses", "what have I completed") and "which skills am I missing" are answered from the data with no model call. Wording the rules do not know still goes to the advise path.
 - E03's answer is valid but not ideal (machine learning courses rather than prompt engineering).
 - Exactly 3 candidate skills are required; with fewer the answer fails politely (not possible with this data).
 - State is in memory and is lost on restart.

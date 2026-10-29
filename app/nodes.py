@@ -11,8 +11,9 @@ from app.followup import render_followup
 from app.guard import check_privacy
 from app.llm import LLM, LLMError, LLMReply
 from app.render import render_enroll_question, render_enrolled, render_recommendation
+from app.gaps import render_gaps
 from app.profile import render_profile
-from app.router import ADVISE, ENROLL, FOLLOWUP, OUT_OF_SCOPE, PROFILE as PROFILE_ROUTE, route_message
+from app.router import ADVISE, ENROLL, FOLLOWUP, GAPS, OUT_OF_SCOPE, PROFILE as PROFILE_ROUTE, route_message
 from app.schemas import Recommendation, recommendation_json_schema
 from app.session import Session
 from app.state import MAX_AGENT_STEPS, MAX_REPAIRS, State, fresh_turn
@@ -99,6 +100,10 @@ class Nodes:
         enrolled = self.store.list_for(state["employee_id"])
         return {"reply": render_profile(state["user_message"], state["employee_id"], self.catalog, enrolled),
                 "outcome": "profile"}
+
+    def gaps(self, state: State) -> dict:
+        """Answer "which skills am I missing?" from the data: required skills of the closest roles. No model call."""
+        return {"reply": render_gaps(state["employee_id"], self.catalog), "outcome": "gaps"}
 
     def out_of_scope(self, state: State) -> dict:
         return {"reply": prompts.OUT_OF_SCOPE, "outcome": "out_of_scope"}
@@ -281,7 +286,7 @@ def after_guard(state: State) -> str:
 
 def after_route(state: State) -> str:
     return {ENROLL: "enroll_agent", ADVISE: "advise_agent", FOLLOWUP: "followup", OUT_OF_SCOPE: "out_of_scope",
-            PROFILE_ROUTE: "profile"}[state["route"]]
+            PROFILE_ROUTE: "profile", GAPS: "gaps"}[state["route"]]
 
 
 def after_agent(state: State) -> str:

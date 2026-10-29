@@ -9,9 +9,9 @@ def _outcomes():
     return run.run_cases(cases, question, SETTINGS, real=False, repeat=1, defense_off=False)
 
 
-def test_there_are_14_cases_and_all_pass_on_the_stub():
+def test_there_are_15_cases_and_all_pass_on_the_stub():
     outcomes = _outcomes()
-    assert len(outcomes) == 14
+    assert len(outcomes) == 15
     assert {o.case_id: o.status for o in outcomes if o.status != "PASS"} == {}
 
 
