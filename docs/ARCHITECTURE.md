@@ -33,7 +33,7 @@ START -> guard --refuse--> END                     (no model call; polite refusa
 ```
 
 - **guard** (deterministic): refuses if the message asks about another person: a different
-  employee's name (full, first, lowercase, possessive), a possessive capitalized name that is
+  employee's name (full, first, lowercase, possessive) or employee id ("E02"), a possessive capitalized name that is
   not the signed-in employee's and not a known skill/course word ("Daniel's skills"), or
   relationship words ("my manager", "my teammate", "everyone on my team", "other employees").
   The signed-in employee's own name is allowed. Claiming to be someone else is refused.

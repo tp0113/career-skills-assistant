@@ -48,8 +48,8 @@ def _word_in(text: str, word: str) -> bool:
 
 
 def _mentions_other_employee(text: str, others: list[Employee]) -> bool:
-    """Rule 1: full, first or last name of someone else. `\b` also matches before 's."""
-    return any(_word_in(text, part) for e in others for part in _name_parts(e))
+    """Rule 1: full, first or last name, or the employee id, of someone else. `\b` also matches before 's."""
+    return any(_word_in(text, part) for e in others for part in [*_name_parts(e), e.id])
 
 
 def _allowed_possessives(catalog: Catalog, me: Employee) -> set[str]:
