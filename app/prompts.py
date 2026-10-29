@@ -54,6 +54,15 @@ ENROLL_SYSTEM = (
 
 NOT_ENROLLED = "Okay, I haven't enrolled you in anything."
 
+NO_RECOMMENDATION = (
+    "I don't have any recommended courses for you yet. Ask me what skills you should develop first, "
+    "then tell me which course you'd like."
+)
+
+ENROLL_CLARIFY = "I wasn't sure which course you meant. Please name one of the recommended courses, for example \"the first one\"."
+
+NOTHING_PENDING = "There is nothing waiting for your confirmation."
+
 
 def _data(source: str, payload: object) -> str:
     return f'<untrusted_data source="{source}">{json.dumps(payload, ensure_ascii=False)}</untrusted_data>'

@@ -1,0 +1,116 @@
+"""Wire the nodes into the LangGraph and wrap it in a small `Assistant` the CLI and API call.
+
+Flow (docs/ARCHITECTURE.md): guard -> route -> advise_agent <-> run_tools -> compose -> validate
+-> respond, or enroll_agent -> confirm (interrupt) -> enroll. The thread id is
+"{employee_id}:{conversation_id}", so two employees never share state (F19).
+"""
+from dataclasses import dataclass, field
+
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.graph import END, StateGraph
+from langgraph.types import Command
+
+from app import nodes as n
+from app import prompts
+from app.config import Settings
+from app.data import Catalog
+from app.enrollments import EnrollmentStore
+from app.llm import LLM
+from app.state import State
+
+
+def build_graph(catalog: Catalog, llm: LLM, store: EnrollmentStore, defense: bool, checkpointer=None):
+    nodes = n.Nodes(catalog, llm, store, defense)
+    graph = StateGraph(State)
+    for name in ("guard", "route", "out_of_scope", "tool_fallback", "advise_agent", "run_tools", "compose",
+                 "validate", "respond", "enroll_agent", "confirm", "enroll"):
+        graph.add_node(name, getattr(nodes, name))
+    graph.set_entry_point("guard")
+    end = {"end": END}
+    graph.add_conditional_edges("guard", n.after_guard, {"route": "route", **end})
+    graph.add_conditional_edges("route", n.after_route, {
+        "enroll_agent": "enroll_agent", "advise_agent": "advise_agent", "out_of_scope": "out_of_scope"})
+    graph.add_conditional_edges("advise_agent", n.after_agent, {
+        "run_tools": "run_tools", "advise_agent": "advise_agent", "tool_fallback": "tool_fallback", **end})
+    graph.add_conditional_edges("run_tools", n.after_tools, {
+        "compose": "compose", "advise_agent": "advise_agent", "tool_fallback": "tool_fallback"})
+    graph.add_conditional_edges("compose", n.after_compose, {"validate": "validate", **end})
+    graph.add_conditional_edges("validate", n.after_validate, {"respond": "respond", "compose": "compose", **end})
+    graph.add_conditional_edges("enroll_agent", n.after_enroll_agent, {"confirm": "confirm", **end})
+    graph.add_conditional_edges("confirm", n.after_confirm, {"enroll": "enroll", **end})
+    for name in ("out_of_scope", "tool_fallback", "respond", "enroll"):
+        graph.add_edge(name, END)
+    return graph.compile(checkpointer=checkpointer or InMemorySaver())
+
+
+@dataclass
+class TurnResult:
+    """What a caller (CLI, API, evals) needs from one turn."""
+
+    reply: str
+    route: str = ""
+    outcome: str = ""
+    recommendation: dict | None = None
+    pending_enrollment: dict | None = None
+    events: list[dict] = field(default_factory=list)
+    flagged: list[dict] = field(default_factory=list)
+    usage: dict = field(default_factory=dict)
+    repair_attempts: int = 0
+    validation_errors: list[str] = field(default_factory=list)
+    called_tools: list[str] = field(default_factory=list)
+
+
+class Assistant:
+    def __init__(self, settings: Settings, catalog: Catalog, llm: LLM, store: EnrollmentStore | None = None) -> None:
+        self.catalog = catalog
+        self.store = store or EnrollmentStore(settings.enrollments_path)
+        self.graph = build_graph(catalog, llm, self.store, settings.injection_defense)
+
+    def _config(self, employee_id: str, conversation_id: str) -> dict:
+        if employee_id not in self.catalog.employees:
+            raise ValueError(f"unknown employee '{employee_id}'")
+        return {"configurable": {"thread_id": f"{employee_id}:{conversation_id}"}}
+
+    def _is_paused(self, config: dict) -> bool:
+        return bool(self.graph.get_state(config).next)
+
+    def ask(self, employee_id: str, conversation_id: str, message: str) -> TurnResult:
+        """A new message. If the thread is waiting at the confirm step, the text is the answer to it."""
+        config = self._config(employee_id, conversation_id)
+        if self._is_paused(config):
+            self.graph.invoke(Command(resume=message), config)
+        else:
+            self.graph.invoke({"employee_id": employee_id, "user_message": message}, config)
+        return self._result(config)
+
+    def confirm(self, employee_id: str, conversation_id: str, confirm: bool) -> TurnResult:
+        """The UI's Confirm/Decline buttons. With nothing pending this does nothing."""
+        config = self._config(employee_id, conversation_id)
+        if not self._is_paused(config):
+            return TurnResult(reply=prompts.NOTHING_PENDING, outcome="nothing_pending")
+        self.graph.invoke(Command(resume={"confirm": confirm}), config)
+        return self._result(config)
+
+    def _result(self, config: dict) -> TurnResult:
+        snapshot = self.graph.get_state(config)
+        values = snapshot.values
+        pending = None
+        if snapshot.next:
+            pending = snapshot.tasks[0].interrupts[0].value
+        return TurnResult(
+            reply=pending["question"] if pending else values.get("reply", ""),
+            route=values.get("route", ""),
+            outcome="enroll_pending" if pending else values.get("outcome", ""),
+            recommendation=values.get("recommendation"),
+            pending_enrollment=pending,
+            events=values.get("events", []),
+            flagged=values.get("flagged", []),
+            usage=values.get("usage", {}),
+            repair_attempts=values.get("repair_attempts", 0),
+            validation_errors=values.get("validation_errors", []),
+            called_tools=values.get("called_tools", []),
+        )
+
+    def state_of(self, employee_id: str, conversation_id: str) -> dict:
+        """The saved state of one thread. Used by tests to prove threads share nothing."""
+        return dict(self.graph.get_state(self._config(employee_id, conversation_id)).values)
