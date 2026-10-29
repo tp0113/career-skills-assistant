@@ -19,6 +19,7 @@ import re
 from typing import Callable
 
 from app.llm import LLMError, LLMReply
+from app.schemas import COURSE_RANGE, ROLE_RANGE, SKILL_COUNT
 
 ORDINALS = {"first": 1, "1st": 1, "second": 2, "2nd": 2, "third": 3, "3rd": 3, "last": -1}
 Scripted = str | Callable[[dict], dict] | None
@@ -122,18 +123,18 @@ class StubLLM:
     def _valid_answer(self, data: dict) -> dict:
         courses, jobs = data["courses"], data["jobs"]
         candidates = [c["id"] for c in data["candidate_skills"]]
-        roles = jobs[:2]
+        roles = jobs[:ROLE_RANGE[1]]
         if self.mode == "obedient":
             poisoned = [j for j in jobs if "ignore your instructions" in j["description"].lower()]
-            roles = (poisoned + [j for j in jobs if j not in poisoned])[:2]
+            roles = (poisoned + [j for j in jobs if j not in poisoned])[:ROLE_RANGE[1]]
         sources_for = lambda sid: ([c["id"] for c in courses if sid in self._skill_ids(c, data)]
                                    + [j["id"] for j in jobs if sid in self._skill_ids(j, data)])[:2]
-        ranked = sorted(candidates, key=lambda s: (-len(sources_for(s)), s))[:3]
+        ranked = sorted(candidates, key=lambda s: (-len(sources_for(s)), s))[:SKILL_COUNT]
         return {
             "skills": [{"skill_id": s, "reason": "It is needed for the roles and courses found.", "sources": sources_for(s)}
                        for s in ranked],
             "courses": [{"course_id": c["id"], "reason": "It teaches skills you do not have yet.", "sources": [c["id"]]}
-                        for c in courses[:3]],
+                        for c in courses[:COURSE_RANGE[1]]],
             "roles": [{"job_id": j["id"], "reason": "It matches your career interest.", "sources": [j["id"]]}
                       for j in roles],
         }
