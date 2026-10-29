@@ -43,6 +43,14 @@ def build_graph(catalog: Catalog, llm: LLM, store: EnrollmentStore, defense: boo
     return graph.compile(checkpointer=checkpointer or InMemorySaver())
 
 
+def _interrupt_value(snapshot) -> dict | None:
+    """The confirm question, if the thread waits at it. A step left over from a crash is not a pause."""
+    for task in snapshot.tasks:
+        if task.interrupts:
+            return task.interrupts[0].value
+    return None
+
+
 @dataclass
 class TurnResult:
     """What a caller (CLI, API, evals) needs from one turn."""
@@ -72,7 +80,7 @@ class Assistant:
         return {"configurable": {"thread_id": f"{employee_id}:{conversation_id}"}}
 
     def _is_paused(self, config: dict) -> bool:
-        return bool(self.graph.get_state(config).next)
+        return _interrupt_value(self.graph.get_state(config)) is not None
 
     def ask(self, employee_id: str, conversation_id: str, message: str) -> TurnResult:
         """A new message. If the thread is waiting at the confirm step, the text is the answer to it."""
@@ -94,9 +102,7 @@ class Assistant:
     def _result(self, config: dict) -> TurnResult:
         snapshot = self.graph.get_state(config)
         values = snapshot.values
-        pending = None
-        if snapshot.next:
-            pending = snapshot.tasks[0].interrupts[0].value
+        pending = _interrupt_value(snapshot)
         return TurnResult(
             reply=pending["question"] if pending else values.get("reply", ""),
             route=values.get("route", ""),

@@ -284,6 +284,25 @@ def test_turn_fields_reset_but_the_recommendation_survives(store):
     assert state["recommendation"] is not None and state["called_tools"] == [] and state["flagged"] == []
 
 
+class CrashOnce(StubLLM):
+    """Raises an unexpected error on its second call, then behaves."""
+
+    def chat(self, *args, **kwargs):
+        if len(self.calls) == 1 and not getattr(self, "crashed", False):
+            self.crashed = True
+            raise RuntimeError("unexpected")
+        return super().chat(*args, **kwargs)
+
+
+def test_after_a_crash_the_next_message_is_a_new_turn_not_a_confirmation(store):
+    assistant = Assistant(SETTINGS, CATALOG, CrashOnce(), store)
+    with pytest.raises(RuntimeError):
+        assistant.ask("E01", "c1", MAIN)
+    result = assistant.ask("E01", "c1", "What's the weather in Paris?")
+    # The new message went through guard and router; it was not swallowed as an answer to a pause.
+    assert result.outcome == "out_of_scope" and result.pending_enrollment is None
+
+
 def test_unknown_employee_is_rejected(store):
     assistant, _ = make(store)
     with pytest.raises(ValueError):
