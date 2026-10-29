@@ -12,6 +12,7 @@ from app.enrollments import EnrollmentStore
 from app.graph import Assistant
 from app.llm import LLMError, OllamaLLM
 from app.route_examples import EXAMPLES
+from app.router import route_message
 from evals.stub_llm import StubLLM
 
 SETTINGS = load_settings()
@@ -29,6 +30,29 @@ VECTORS = {
     "chat about lunch": [0, 0, 0.2, 0.95],
     "tell me about rain": [0.1, 0, 0, 0.9],
 }
+
+
+@pytest.mark.parametrize("bad", [
+    [None], [["x", 1.0, 0.0, 0.0]], [[1.0, 0.0]], [[]], [[float("nan"), 0, 0, 0]], [[1.0, 0, 0, 0], [0, 1.0, 0, 0]],
+])
+def test_a_malformed_query_vector_falls_back_to_the_rules(bad):
+    """Codex 3 finding 5: null, text, short or extra vectors crashed the request or were silently truncated."""
+    healthy = FakeEmbedder()
+    router = EmbedRouter(lambda texts: healthy(texts) if len(texts) > 1 else bad, examples=SMALL)
+    assert pick_route("list what I hold", None, (), router) == (route_message("list what I hold"), "rules", 0.0)
+
+
+def test_malformed_example_vectors_are_not_cached():
+    """Codex 3 finding 5: a bad first batch stayed in the cache, so every later request failed too."""
+    healthy, calls = FakeEmbedder(), []
+
+    def embed(texts):
+        calls.append(len(texts))
+        return [[None]] * len(texts) if len(calls) == 1 else healthy(texts)
+
+    router = EmbedRouter(embed, examples=SMALL)
+    assert pick_route("list what I hold", None, (), router)[1] == "rules"
+    assert pick_route("list what I hold", None, (), router) == ("profile", "embedding", pytest.approx(0.994, abs=0.01))
 
 
 class FakeEmbedder:

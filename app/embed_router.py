@@ -35,6 +35,21 @@ class Decision:
     margin: float
 
 
+def _checked(vectors, count: int, size: int | None = None) -> list[list[float]]:
+    """`count` vectors of real numbers, all one length (`size` if given). Anything else is an LLMError, so the
+    rules decide instead of a crash or a silently cut comparison (Codex 3 finding 5)."""
+    if not isinstance(vectors, list) or len(vectors) != count:
+        raise LLMError("embedding: wrong number of vectors")
+    for vector in vectors:
+        if not isinstance(vector, list) or not vector or not all(
+                isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x) for x in vector):
+            raise LLMError("embedding: a vector is not a list of finite numbers")
+    size = size or len(vectors[0])
+    if any(len(vector) != size for vector in vectors):
+        raise LLMError("embedding: vectors of different lengths")
+    return vectors
+
+
 def _cosine(a: list[float], b: list[float]) -> float:
     dot = sum(x * y for x, y in zip(a, b))
     norm = math.sqrt(sum(x * x for x in a)) * math.sqrt(sum(y * y for y in b))
@@ -56,14 +71,14 @@ class EmbedRouter:
         with self._lock:
             if self._vectors is None:
                 pairs = [(route, text) for route, texts in self._examples.items() for text in texts]
-                vectors = self._embed([PREFIX + text for _, text in pairs])
+                vectors = _checked(self._embed([PREFIX + text for _, text in pairs]), len(pairs))
                 self._vectors = [(route, vector) for (route, _), vector in zip(pairs, vectors)]
             return self._vectors
 
     def scores(self, message: str) -> dict[str, float]:
         """Best similarity per route. Raises LLMError if the embedding call fails."""
         examples = self._example_vectors()
-        vector = self._embed([PREFIX + message])[0]
+        vector = _checked(self._embed([PREFIX + message]), 1, len(examples[0][1]))[0]
         best: dict[str, float] = {}
         for route, example in examples:
             best[route] = max(best.get(route, -1.0), _cosine(vector, example))
