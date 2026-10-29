@@ -8,7 +8,8 @@ or posting items it came from. If the employee says yes, it enrolls them in a co
 It runs locally on a laptop GPU with `llama3.1:8b` through Ollama. All data is synthetic.
 
 > Status: the agent, follow-up questions, injection before/after, tests, evals, request logging and the web UI
-> are done. The UI has been checked against the served build and the API tests, not yet by hand with the real model.
+> are done. The UI was clicked through by hand on the real model for all three employees (`docs/UI-TEST-SCRIPT.md`).
+> Its look is functional, not polished.
 
 ## Design at a glance
 
