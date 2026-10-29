@@ -2,7 +2,8 @@
 
 Each rule has its own error string. On failure the strings are sent back to the model so it can
 repair its answer (the graph allows at most 2 repairs). With the injection defense off, only the
-"flagged" checks are skipped; that is the "before" half of the before/after measurement.
+"flagged" and "reads like an instruction" checks are skipped; that is the "before" half of the
+before/after measurement.
 """
 import json
 import re
@@ -12,6 +13,7 @@ from pydantic import ValidationError
 
 from app.data import Catalog
 from app.guard import mentions_another_employee
+from app.injection import scan_text
 from app.session import Session
 from app.schemas import (
     COURSE_RANGE, MAX_REASON_CHARS, ROLE_RANGE, SKILL_COUNT, CourseRec, ModelRecommendation,
@@ -93,6 +95,8 @@ def _check_reason(where: str, reason: str, vctx: ValidationContext, allowed_ids:
         errors.append(f"{where}: the reason mentions another employee.")
     if vctx.defense and any(_flagged_title(i, vctx).lower() in reason.lower() for i in vctx.flagged_ids):
         errors.append(f"{where}: the reason mentions a posting that was flagged as unsafe.")
+    if vctx.defense and scan_text(reason)[1]:
+        errors.append(f"{where}: the reason reads like an instruction. Say only why it fits the employee.")
     return errors
 
 

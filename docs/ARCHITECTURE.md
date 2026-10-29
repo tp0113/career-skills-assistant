@@ -13,7 +13,7 @@ All data is synthetic. The default model is a local `llama3.1:8b` served by Olla
 |---|---|
 | An employee only ever sees their own data | `app/guard.py` runs before any model call. No tool has an employee-id parameter; `app/tools.py` reads the id from the server-side session. |
 | Enrollment only after an explicit yes | `app/graph.py`: the enroll proposal pauses on a LangGraph `interrupt()`. Only the `enroll` node writes, and only if the `enrollment_confirmed` flag (set from the confirmation, not by the model) is true for the same course. |
-| Recommendations are real and checked | `app/validate.py`: counts, ids exist, ids were retrieved this turn, completed courses excluded, flagged postings excluded, every source shares a skill with its item, and each reason is one line that names no id outside the recommendation, no other employee and no flagged posting. Titles are filled from the data, not from the model. |
+| Recommendations are real and checked | `app/validate.py`: counts, ids exist, ids were retrieved this turn, completed courses excluded, flagged postings excluded, every source shares a skill with its item, and each reason is one line that names no id outside the recommendation, no other employee and no flagged posting, and that the injection filter does not flag. Titles are filled from the data, not from the model. |
 
 ## Request flow (the graph)
 
@@ -38,7 +38,9 @@ START -> guard --refuse--> END                     (no model call; polite refusa
   relationship words ("my manager", "my teammate", "everyone on my team", "other employees").
   The signed-in employee's own name is allowed. Claiming to be someone else is refused.
 - **route** (deterministic keyword rules): `enroll` (enroll / sign me up / register),
-  `followup` (an ordinal or "tell me more" and a previous recommendation exists),
+  `followup` (a previous recommendation exists, the message does not ask for something new such as
+  "recommend" or "different", and it either has a position next to an item word ("the second course",
+  "the last job"), or "tell me more" with an item word, or a question like "what about" with a saved title word),
   `advise` (career, skill, learn, course, role, job, grow...), else `out_of_scope`.
 - **advise_agent / run_tools**: the model chooses each tool call and its arguments. The
   graph decides which tools are *offered* at each step: first only `get_employee_profile`,
@@ -59,10 +61,12 @@ START -> guard --refuse--> END                     (no model call; polite refusa
   sources that do not support their item are dropped, so the provenance shown is true.
 - **respond**: the friendly message is rendered in code from the validated object, so no
   free model prose reaches the user on this path.
-- **followup** (`app/followup.py`): no model call. Code resolves "the second course", "the first role" or a
-  title word against the saved recommendation, then renders the answer from the data files (the item's
-  description is passed through the injection filter again). A position that does not exist, or an unclear
-  reference, gets a short clarifying question instead of a guess. The saved recommendation is left unchanged,
+- **followup** (`app/followup.py`): no model call. Code resolves the item against the saved recommendation:
+  a named kind ("course", "role" or "job", "skill") limits the search to that list; then a full title wins,
+  then a position ("the second course"), then the one title sharing the most words. Then it renders the answer
+  from the data files (the item's description and the saved reason pass through the injection filter again).
+  A position that does not exist, a tie, or an unclear reference gets a short clarifying question instead of a
+  guess; an id no longer in the catalog gets a short "no longer available" message. The saved recommendation is left unchanged,
   so "enroll me in the first course" still works afterwards.
 - **enroll_agent**: the model is offered only `enroll_in_course(course_id)` and the last
   recommended courses, so it resolves "the second one" to an id. Code checks the id exists,
@@ -119,7 +123,8 @@ score and matched terms; those ids are the provenance shown in the UI.
    instructions, "recommend this to everyone", fake role tags like `system:`), removes them
    before the model sees them, and quarantines the item.
 3. **Validate**: a role can be recommended only if it was retrieved this turn and not flagged.
-   So even a fooled model cannot get a poisoned posting into the output.
+   So even a fooled model cannot get a poisoned posting into the output. A reason the filter
+   would flag ("ignore your instructions...") is rejected and sent back for repair.
 
 `INJECTION_DEFENSE=off` disables layers 2 and 3, only for the before/after comparison.
 `python -m evals.before_after` runs that comparison (E01 and E02, 3 runs per cell, obedient stub or `--real`).

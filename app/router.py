@@ -14,8 +14,22 @@ ADVISE = "advise"
 OUT_OF_SCOPE = "out_of_scope"
 
 _ENROLL = re.compile(r"\b(?:enrol{1,2}|sign\s+me\s+up|register\s+me|sign\s+up\s+for)\b", re.IGNORECASE)
-_ORDINAL = re.compile(r"\b(?:first|second|third|1st|2nd|3rd|last|that|tell\s+me\s+more|more\s+about)\b", re.IGNORECASE)
-_ITEM_WORD = re.compile(r"\b(?:course|role|skill|one)s?\b", re.IGNORECASE)
+# "the second course", "that one", "the last machine learning course": a position, then the item word
+# within two words. "the last day of my course" is too far apart, so it is not a follow-up.
+_POSITION = re.compile(
+    r"\b(?:first|second|third|1st|2nd|3rd|last|that|this)\s+(?:\w+\s+){0,2}?(?:course|role|job|skill|one)s?\b",
+    re.IGNORECASE,
+)
+_MORE = re.compile(r"\b(?:tell\s+me\s+more|more\s+about)\b", re.IGNORECASE)
+_ITEM_WORD = re.compile(r"\b(?:course|role|job|skill|one)s?\b", re.IGNORECASE)
+# A title word only counts when the message asks about something already shown.
+_ASKS_ABOUT = re.compile(
+    r"\b(?:tell\s+me\s+(?:more\s+)?about|more\s+about|what\s+about|explain|describe|details?|"
+    r"what\s+is|what's|how\s+long)\b",
+    re.IGNORECASE,
+)
+# Asking for something new is a fresh request, even if it repeats a saved title word.
+_FRESH = re.compile(r"\b(?:recommend\w*|suggest\w*|different|other|another|new|instead|alternatives?)\b", re.IGNORECASE)
 _ADVISE = re.compile(
     r"\b(?:skills?|learn\w*|courses?|career|roles?|jobs?|grow\w*|develop\w*|next\s+step|promotion|improve\w*)\b",
     re.IGNORECASE,
@@ -32,11 +46,12 @@ def _title_words(rec: Recommendation) -> set[str]:
 
 
 def _is_followup(message: str, rec: Recommendation | None) -> bool:
-    if rec is None:
+    """Codex checkpoint 2: a saved title word alone used to make any message a follow-up."""
+    if rec is None or _FRESH.search(message):
         return False
-    if _ORDINAL.search(message) and _ITEM_WORD.search(message):
+    if _POSITION.search(message) or (_MORE.search(message) and _ITEM_WORD.search(message)):
         return True
-    return bool(_title_words(rec) & set(tokenize(message)))
+    return bool(_ASKS_ABOUT.search(message) and _title_words(rec) & set(tokenize(message)))
 
 
 def route_message(message: str, recommendation: Recommendation | None = None) -> str:
