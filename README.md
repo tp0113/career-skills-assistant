@@ -7,8 +7,8 @@ or posting items it came from. If the employee says yes, it enrolls them in a co
 
 It runs locally on a laptop GPU with `llama3.1:8b` through Ollama. All data is synthetic.
 
-> Status: the agent, follow-up questions, injection before/after, tests and evals are done. The web UI and
-> request logging are still to come (see "Next steps").
+> Status: the agent, follow-up questions, injection before/after, tests, evals, request logging and the web UI
+> are done. The UI has been checked against the served build and the API tests, not yet by hand with the real model.
 
 ## Design at a glance
 
@@ -42,6 +42,14 @@ python -m evals.run --real --repeat 3                 # eval cases on the real m
                                                       # (exits 1 on any failure; add --report-only to only measure)
 python -m evals.run --defense off                     # the injection case with the code defenses off
 ```
+
+The web UI (needs Node 18+ for the first build):
+
+```
+powershell -ExecutionPolicy Bypass -File scripts/run_demo.ps1     # builds web/dist if missing, then open http://localhost:8000
+```
+
+Each request adds one line to `logs/requests.jsonl` (ids, route, outcome, tools, tokens, seconds; never the message text).
 
 Employees are `E01` (Priya Shah), `E02` (Marcus Okafor) and `E03` (Elena Petrova), all fictional.
 PowerShell helpers run with `powershell -ExecutionPolicy Bypass -File scripts/<name>.ps1`
@@ -201,5 +209,4 @@ connection first; the default is now `127.0.0.1` with a 5 s connect limit.
 
 ## Next steps
 
-- Request logging and a small web UI (FastAPI + React).
 - Out of scope: a second, cooperating agent.
