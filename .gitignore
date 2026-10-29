@@ -1,0 +1,35 @@
+# Secrets and local config
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node / web build
+node_modules/
+web/dist/
+
+# AI tool folders (local settings only)
+.claude/
+.codex/
+
+# Runtime output: logs, enrollments written by the demo, scratch
+logs/
+var/
+*.log
+notes/
+scratch/
+
+# Local model caches
+.ollama/
+models/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
