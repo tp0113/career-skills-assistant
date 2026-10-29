@@ -36,6 +36,8 @@ class LLM(Protocol):
     def chat(self, messages: list[dict], tools: list[dict] | None = None,
              json_schema: dict | None = None) -> LLMReply: ...
 
+    def embed(self, texts: list[str]) -> list[list[float]]: ...
+
 
 class OllamaLLM:
     def __init__(self, settings: Settings, client: httpx.Client | None = None) -> None:
@@ -80,6 +82,21 @@ class OllamaLLM:
             output_tokens=int(body.get("eval_count") or 0),
             latency_ms=int((time.perf_counter() - started) * 1000),
         )
+
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        """One vector per text from Ollama's native /api/embed. Rule 6: num_ctx is sent here too."""
+        payload = {"model": self.settings.embed_model, "input": texts,
+                   "options": {"num_ctx": self.settings.ollama_num_ctx}}
+        try:
+            response = self.client.post(f"{self.settings.ollama_url}/api/embed", json=payload)
+            response.raise_for_status()
+            vectors = response.json()["embeddings"]
+        except (httpx.HTTPError, ValueError, KeyError) as exc:
+            raise LLMError(f"embedding call failed: {exc}") from exc
+        if len(vectors) != len(texts):
+            raise LLMError("embedding call returned the wrong number of vectors")
+        return vectors
 
 
 def get_llm(settings: Settings) -> LLM:

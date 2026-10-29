@@ -39,7 +39,13 @@ START -> guard --refuse--> END                     (no model call; polite refusa
   not the signed-in employee's and not a known skill/course word ("Daniel's skills"), or
   relationship words ("my manager", "my teammate", "everyone on my team", "other employees").
   The signed-in employee's own name is allowed. Claiming to be someone else is refused.
-- **route** (deterministic keyword rules): `enroll` (enroll / sign me up / register),
+- **route** (`app/router.py` rules, then `app/embed_router.py`): the keyword rules below run first. When they fall
+  through to `advise` or `out_of_scope` (the catch-alls), the message is embedded (`nomic-embed-text`, Ollama
+  `/api/embed`, with `num_ctx`) and compared with the example questions in `app/route_examples.py`. A route counts only
+  if its best similarity is at least 0.75 and 0.03 ahead of the next; otherwise the rules' answer stands, and so it does
+  if the embedding call fails. The embeddings can only choose `profile`, `gaps`, `advise` or `out_of_scope`; `enroll`
+  and `followup` are rules-only, and the privacy guard runs before all of this. The result records `route_source`
+  (`rules` or `embedding`) and `route_score` in the log. The rules (deterministic keyword rules): `enroll` (enroll / sign me up / register),
   `profile` (a list word straight before "my skills / my courses / what have I completed", with no advice word;
   the signed-in employee's own name in the possessive counts as "my"),
   `followup` (a previous recommendation exists, the message does not ask for something new such as

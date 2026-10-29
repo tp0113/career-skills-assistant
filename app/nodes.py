@@ -13,7 +13,8 @@ from app.llm import LLM, LLMError, LLMReply
 from app.render import render_enroll_question, render_enrolled, render_recommendation
 from app.gaps import render_gaps
 from app.profile import render_profile
-from app.router import ADVISE, ENROLL, FOLLOWUP, GAPS, OUT_OF_SCOPE, PROFILE as PROFILE_ROUTE, route_message
+from app.embed_router import EmbedRouter, pick_route
+from app.router import ADVISE, ENROLL, FOLLOWUP, GAPS, OUT_OF_SCOPE, PROFILE as PROFILE_ROUTE
 from app.schemas import Recommendation, recommendation_json_schema
 from app.session import Session
 from app.state import MAX_AGENT_STEPS, MAX_REPAIRS, State, fresh_turn
@@ -73,7 +74,9 @@ def _assistant_message(reply: LLMReply) -> dict:
 
 
 class Nodes:
-    def __init__(self, catalog: Catalog, llm: LLM, store: EnrollmentStore, defense: bool) -> None:
+    def __init__(self, catalog: Catalog, llm: LLM, store: EnrollmentStore, defense: bool,
+                 embed_router: EmbedRouter | None = None) -> None:
+        self.embed_router = embed_router
         self.catalog = catalog
         self.llm = llm
         self.store = store
@@ -93,7 +96,9 @@ class Nodes:
         rec = state.get("recommendation")
         me = self.catalog.employees[state["employee_id"]]
         names = (*me.name.split(), me.name)
-        return {"route": route_message(state["user_message"], Recommendation.model_validate(rec) if rec else None, names)}
+        route, source, score = pick_route(
+            state["user_message"], Recommendation.model_validate(rec) if rec else None, names, self.embed_router)
+        return {"route": route, "route_source": source, "route_score": score}
 
     def profile(self, state: State) -> dict:
         """Answer "list my skills" from the signed-in employee's own data. No model call."""

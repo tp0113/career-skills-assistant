@@ -11,6 +11,8 @@ class State(TypedDict, total=False):
     # This turn's input and result.
     user_message: str
     route: str
+    route_source: str
+    route_score: float
     reply: str
     outcome: str
     # Tool-use bookkeeping.
@@ -47,7 +49,7 @@ def new_usage() -> dict[str, int]:
 def fresh_turn() -> dict[str, Any]:
     """Turn fields back to empty. `recommendation` and the `pending_*` fields are left alone."""
     return {
-        "route": "", "reply": "", "outcome": "",
+        "route": "", "route_source": "", "route_score": 0.0, "reply": "", "outcome": "",
         "llm_messages": [], "called_tools": [], "agent_steps": 0, "offered_tools": [], "pending_calls": [],
         "profile": None, "retrieved_courses": {}, "retrieved_jobs": {}, "flagged": [],
         "compose_messages": [], "compose_raw": "", "repair_attempts": 0, "verdict": "",

@@ -16,12 +16,14 @@ from app import prompts
 from app.config import Settings
 from app.data import Catalog
 from app.enrollments import EnrollmentStore
+from app.embed_router import EmbedRouter
 from app.llm import LLM
 from app.state import State
 
 
-def build_graph(catalog: Catalog, llm: LLM, store: EnrollmentStore, defense: bool, checkpointer=None):
-    nodes = n.Nodes(catalog, llm, store, defense)
+def build_graph(catalog: Catalog, llm: LLM, store: EnrollmentStore, defense: bool, checkpointer=None,
+                embed_router: bool = False):
+    nodes = n.Nodes(catalog, llm, store, defense, EmbedRouter(llm.embed) if embed_router else None)
     graph = StateGraph(State)
     for name in ("guard", "route", "out_of_scope", "followup", "profile", "gaps", "tool_fallback", "advise_agent", "run_tools", "compose",
                  "validate", "respond", "enroll_agent", "confirm", "enroll"):
@@ -59,6 +61,8 @@ class TurnResult:
 
     reply: str
     route: str = ""
+    route_source: str = ""
+    route_score: float = 0.0
     outcome: str = ""
     recommendation: dict | None = None
     pending_enrollment: dict | None = None
@@ -74,7 +78,8 @@ class Assistant:
     def __init__(self, settings: Settings, catalog: Catalog, llm: LLM, store: EnrollmentStore | None = None) -> None:
         self.catalog = catalog
         self.store = store or EnrollmentStore(settings.enrollments_path)
-        self.graph = build_graph(catalog, llm, self.store, settings.injection_defense)
+        self.graph = build_graph(catalog, llm, self.store, settings.injection_defense,
+                                  embed_router=settings.embed_router)
 
     def _config(self, employee_id: str, conversation_id: str) -> dict:
         if employee_id not in self.catalog.employees:
@@ -123,6 +128,8 @@ class Assistant:
         return TurnResult(
             reply=pending["question"] if pending else values.get("reply", ""),
             route=values.get("route", ""),
+            route_source=values.get("route_source", ""),
+            route_score=values.get("route_score", 0.0),
             outcome=outcome,
             # The thread remembers the last recommendation; a result shows it only if this turn validated it.
             recommendation=values.get("recommendation") if outcome == "ok" else None,

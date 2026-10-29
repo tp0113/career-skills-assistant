@@ -24,6 +24,7 @@ pip install -r requirements.txt
 python -m pytest -q                                  unit tests, stub model, no Ollama needed
 python -m evals.run                                  eval cases on the stub model
 python -m evals.run --real                           eval cases on the configured real model
+python -m evals.route_eval                           router accuracy, rules vs rules + embeddings (needs Ollama)
 uvicorn app.api:app --port 8000                      API + built UI
 ```
 

@@ -18,6 +18,8 @@ def metrics_of(result: TurnResult, seconds: float) -> dict:
         "repair_attempts": result.repair_attempts,
         "tools": result.called_tools,
         "route": result.route,
+        "route_source": result.route_source,
+        "route_score": result.route_score,
         "outcome": result.outcome,
     }
 

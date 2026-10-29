@@ -18,7 +18,7 @@ import json
 import re
 from typing import Callable
 
-from app.llm import LLMReply
+from app.llm import LLMError, LLMReply
 
 ORDINALS = {"first": 1, "1st": 1, "second": 2, "2nd": 2, "third": 3, "3rd": 3, "last": -1}
 Scripted = str | Callable[[dict], dict] | None
@@ -43,11 +43,19 @@ def _done_tools(messages: list[dict]) -> dict[str, str]:
 
 
 class StubLLM:
-    def __init__(self, mode: str = "cooperative", compose_replies: list[Scripted] | None = None) -> None:
+    def __init__(self, mode: str = "cooperative", compose_replies: list[Scripted] | None = None,
+                 embedder: Callable[[list[str]], list[list[float]]] | None = None) -> None:
+        self.embedder = embedder
         self.mode = mode
         self.compose_replies = list(compose_replies or [])
         self.calls: list[dict] = []
         self._tried_early = False
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        """No embeddings unless a test passes its own: the router then falls back to the keyword rules."""
+        if self.embedder is None:
+            raise LLMError("the stub model has no embeddings")
+        return self.embedder(texts)
 
     def chat(self, messages: list[dict], tools: list[dict] | None = None,
              json_schema: dict | None = None) -> LLMReply:

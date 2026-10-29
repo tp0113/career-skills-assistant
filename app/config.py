@@ -19,6 +19,9 @@ class Settings:
     ollama_model: str
     # Sent on every Ollama request. The 32K default spills to CPU on an 8 GB GPU.
     ollama_num_ctx: int
+    # Embedding model for the semantic router, and whether to use it (EMBED_ROUTER=off gives the keyword rules only).
+    embed_model: str
+    embed_router: bool
     anthropic_model: str
     data_dir: Path
     enrollments_path: Path
@@ -39,6 +42,8 @@ def load_settings() -> Settings:
         ollama_url=os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/"),
         ollama_model=os.getenv("OLLAMA_MODEL", "llama3.1:8b"),
         ollama_num_ctx=int(os.getenv("OLLAMA_NUM_CTX", "8192")),
+        embed_model=os.getenv("OLLAMA_EMBED_MODEL", "nomic-embed-text"),
+        embed_router=os.getenv("EMBED_ROUTER", "on").lower() != "off",
         anthropic_model=os.getenv("ANTHROPIC_MODEL", "claude-haiku-5-5"),
         data_dir=_path("DATA_DIR", "data"),
         enrollments_path=_path("ENROLLMENTS_PATH", "var/enrollments.json"),

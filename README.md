@@ -17,6 +17,9 @@ It runs locally on a laptop GPU with `llama3.1:8b` through Ollama. All data is s
 - **Privacy in code**: no tool takes an employee id; a guard refuses questions about other
   people before the model is called.
 - **Enrollment gate in code**: a LangGraph interrupt plus a flag the enroll step checks.
+- **A two-step router**: keyword rules first (enroll, follow-ups and plain questions are decided here), then a
+  small embedding model (`nomic-embed-text` through Ollama) for wording the rules do not know. It only picks
+  among routes that read your own data or give a canned answer, and it keeps the rules' answer when it is unsure.
 - **Keyword retrieval with provenance**, **validated structured output**, and a
   **prompt-injection defense** tested against a deliberately poisoned job posting.
 
@@ -33,13 +36,15 @@ python -m evals.run                                   # the 15 eval cases on the
 python -m app.cli --stub --employee E01 "What skills should I develop for my next career opportunity?"
 ```
 
-To use the real model, install [Ollama](https://ollama.com), run `ollama pull llama3.1:8b`, copy
+To use the real model, install [Ollama](https://ollama.com), run `ollama pull llama3.1:8b` and
+`ollama pull nomic-embed-text` (the router; without it the keyword rules decide alone), copy
 `.env.example` to `.env` if you want to change a setting, and then:
 
 ```
 python -m app.cli --employee E01 "What skills should I develop for my next career opportunity?"
 python -m evals.run --real --repeat 3                 # eval cases on the real model, a pass rate per case
                                                       # (exits 1 on any failure; add --report-only to only measure)
+python -m evals.route_eval                            # router accuracy: rules only vs rules + embeddings (needs Ollama)
 python -m evals.run --defense off                     # the injection case with the code defenses off
 ```
 
@@ -76,7 +81,7 @@ PowerShell helpers run with `powershell -ExecutionPolicy Bypass -File scripts/<n
 
 ## Test results
 
-Unit tests: `python -m pytest -q` gives **320 passed** (fake model, no Ollama).
+Unit tests: `python -m pytest -q` gives **342 passed** (fake model, no Ollama).
 
 Evals on the fake model (`python -m evals.run`, saved in
 [evals/results/stub-2026-10-28.md](evals/results/stub-2026-10-28.md)): **13 of 13 PASS**.
@@ -203,6 +208,13 @@ connection first; the default is now `127.0.0.1` with a 5 s connect limit.
 - **Follow-up and routing are keyword rules.** "Tell me more about the machine learning course" when two
   recommended courses share those words gets a clarifying question, not a guess. A question that mentions a course
   but is not about the recommendation ("the weather on the last day of my course") goes to the advise path.
+- **Router numbers** (`python -m evals.route_eval`, 52 labelled messages, saved in `evals/results/route-eval-2026-10-28.md`):
+  keyword rules alone 29/52, rules + embeddings 48/52. The honest number is the 15 "holdout" messages written after the
+  examples and thresholds were fixed and run once: rules alone 8/15, rules + embeddings 14/15. The "test" half (18/19) was
+  looked at while I wrote the examples, so it is not independent. The remaining misses are close calls between "skill gaps"
+  and "advise"; the router then keeps the rules' answer (advise), so it errs on the old behaviour, not on a new guess.
+  Cost: about 13 ms per message once warm, about 0.5 s the first time (it embeds the 42 examples); both models stay
+  100% on the GPU together. Small sample: treat it as a sanity check, not a benchmark.
 - **"List my skills" is a keyword rule too.** Plain phrasings ("list my skills", "what are my courses", "what have I completed") and "which skills am I missing" are answered from the data with no model call. Wording the rules do not know still goes to the advise path.
 - E03's answer is valid but not ideal (machine learning courses rather than prompt engineering).
 - Exactly 3 candidate skills are required; with fewer the answer fails politely (not possible with this data).

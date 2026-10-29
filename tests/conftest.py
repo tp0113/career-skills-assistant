@@ -7,3 +7,5 @@ imports this file first, so the default is pinned here; tests that need it off s
 import os
 
 os.environ["INJECTION_DEFENSE"] = "on"
+# The embedding router needs Ollama; tests that want it build their own with a fake embedder.
+os.environ["EMBED_ROUTER"] = "off"
