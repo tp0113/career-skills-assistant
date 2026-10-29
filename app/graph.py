@@ -105,11 +105,13 @@ class Assistant:
         snapshot = self.graph.get_state(config)
         values = snapshot.values
         pending = _interrupt_value(snapshot)
+        outcome = "enroll_pending" if pending else values.get("outcome", "")
         return TurnResult(
             reply=pending["question"] if pending else values.get("reply", ""),
             route=values.get("route", ""),
-            outcome="enroll_pending" if pending else values.get("outcome", ""),
-            recommendation=values.get("recommendation"),
+            outcome=outcome,
+            # The thread remembers the last recommendation; a result shows it only if this turn validated it.
+            recommendation=values.get("recommendation") if outcome == "ok" else None,
             pending_enrollment=pending,
             events=values.get("events", []),
             flagged=values.get("flagged", []),

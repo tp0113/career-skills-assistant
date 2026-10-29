@@ -304,6 +304,21 @@ def test_a_pending_enrollment_in_one_thread_does_not_leak_to_another(store):
     assert result.outcome == "enroll_clarify"  # E02 has no recommendation of their own yet
 
 
+def test_a_refusal_after_a_recommendation_does_not_return_the_old_one(store):
+    assistant, _ = make(store)
+    recommended(assistant)
+    result = assistant.ask("E01", "c1", "What are Marcus's skills?")
+    assert result.outcome == "refused" and result.recommendation is None
+
+
+def test_a_failed_turn_after_a_success_does_not_return_the_old_recommendation(store):
+    assistant, _ = make(store, compose_replies=[None, "bad", "bad", "bad"])
+    recommended(assistant)
+    result = assistant.ask("E01", "c1", MAIN)
+    assert result.outcome == "validation_failed" and result.recommendation is None
+    assert assistant.state_of("E01", "c1")["recommendation"] is not None  # still remembered for follow-ups
+
+
 def test_turn_fields_reset_but_the_recommendation_survives(store):
     assistant, _ = make(store)
     recommended(assistant)
