@@ -13,11 +13,11 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictBool
 
 from app.config import Settings, load_settings
 from app.data import load_catalog
-from app.graph import Assistant, TurnResult
+from app.graph import Assistant, TurnResult, UnknownEmployee
 from app.llm import get_llm
 from app.metrics import log_request, metrics_of
 
@@ -34,7 +34,8 @@ class ChatRequest(BaseModel):
 class ConfirmRequest(BaseModel):
     employee_id: str
     conversation_id: str = Field(min_length=1, max_length=64)
-    confirm: bool
+    # Strict: plain bool would turn "on" or 1 into True, a yes the gate never saw (Codex 3 finding 1).
+    confirm: StrictBool
     course_id: str
 
 
@@ -48,12 +49,17 @@ def create_app(settings: Settings, assistant: Assistant) -> FastAPI:
     app = FastAPI(title="Career skills assistant")
 
     def run_turn(employee_id: str, turn: Callable[[], TurnResult]) -> dict:
-        """Time a turn, log one line, shape the response. An unknown employee is a 404, not a crash."""
+        """Time a turn, log one line, shape the response. An unknown employee is a 404; any other failure is
+        logged as outcome "error" and answered with a fixed text, so no internal detail reaches the browser."""
         started = time.perf_counter()
         try:
             result = turn()
-        except ValueError as error:
-            raise HTTPException(status_code=404, detail=str(error)) from error
+        except UnknownEmployee as error:
+            raise HTTPException(status_code=404, detail="unknown employee") from error
+        except Exception as error:
+            log_request(settings.request_log_path, employee_id,
+                        {"seconds": round(time.perf_counter() - started, 1), "outcome": "error"})
+            raise HTTPException(status_code=500, detail="internal error") from error
         metrics = metrics_of(result, time.perf_counter() - started)
         log_request(settings.request_log_path, employee_id, metrics)
         return _payload(result, metrics)
