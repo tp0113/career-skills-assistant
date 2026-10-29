@@ -1,7 +1,8 @@
 """Run the eval cases and print a pass/fail table.
 
   python -m evals.run                      stub model, exits 1 on any failure
-  python -m evals.run --real --repeat 3    the cases tagged "real" on the configured model, a pass rate per case
+  python -m evals.run --real --repeat 3    the cases tagged "real" on the configured model, a pass rate per case;
+                                           also exits 1 on any failure (add --report-only to always exit 0)
   python -m evals.run --defense off        the injection case with the code layers off (shows what they stop)
   python -m evals.run --real --case poisoned_posting   only the named case(s); results are saved under a "-partial" name
 
@@ -156,12 +157,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--repeat", type=int, default=3, help="runs per case with --real (default 3)")
     parser.add_argument("--defense", choices=["on", "off"], default="on", help="off: injection case only, layers 2-3 off")
     parser.add_argument("--case", action="append", help="run only this case id (repeatable)")
+    parser.add_argument("--report-only", action="store_true", help="print and save the results, but always exit 0")
     args = parser.parse_args(argv)
 
-    settings = load_settings()
+    # The flag decides, not INJECTION_DEFENSE in the environment (Codex checkpoint 2 finding 6).
     defense_off = args.defense == "off"
-    if defense_off:
-        settings = replace(settings, injection_defense=False)
+    settings = replace(load_settings(), injection_defense=not defense_off)
     main_question, cases = load_cases()
     if defense_off:
         cases = [c for c in cases if c.get("defense_off_checks")]
@@ -175,8 +176,11 @@ def main(argv: list[str] | None = None) -> int:
     print("\n" + render_table(outcomes, args.real))
     print("\n" + summary_line(outcomes))
     print(f"saved {save(outcomes, settings, args.real, args.repeat, defense_off, bool(args.case))}")
-    # A real run reports honestly and does not fail the command; the stub run is the gate.
-    return 0 if args.real else int(any(o.is_bad for o in outcomes))
+    # Both runs gate (Codex checkpoint 2 finding 5); a measuring run on the flaky real model says --report-only.
+    if args.report_only:
+        print("report only: exit 0 whatever the results")
+        return 0
+    return int(any(o.is_bad for o in outcomes))
 
 
 if __name__ == "__main__":
