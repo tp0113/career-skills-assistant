@@ -84,6 +84,8 @@ class Assistant:
 
     def ask(self, employee_id: str, conversation_id: str, message: str) -> TurnResult:
         """A new message. If the thread is waiting at the confirm step, the text is the answer to it."""
+        if not isinstance(message, str):
+            raise TypeError("message must be text; buttons use confirm()")
         config = self._config(employee_id, conversation_id)
         if self._is_paused(config):
             self.graph.invoke(Command(resume=message), config)
@@ -91,12 +93,12 @@ class Assistant:
             self.graph.invoke({"employee_id": employee_id, "user_message": message}, config)
         return self._result(config)
 
-    def confirm(self, employee_id: str, conversation_id: str, confirm: bool) -> TurnResult:
-        """The UI's Confirm/Decline buttons. With nothing pending this does nothing."""
+    def confirm(self, employee_id: str, conversation_id: str, confirm: bool, course_id: str) -> TurnResult:
+        """The UI's Confirm/Decline buttons, for the course they were shown for. With nothing pending this does nothing."""
         config = self._config(employee_id, conversation_id)
         if not self._is_paused(config):
             return TurnResult(reply=prompts.NOTHING_PENDING, outcome="nothing_pending")
-        self.graph.invoke(Command(resume={"confirm": confirm}), config)
+        self.graph.invoke(Command(resume={"confirm": confirm, "course_id": course_id}), config)
         return self._result(config)
 
     def _result(self, config: dict) -> TurnResult:

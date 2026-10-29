@@ -61,9 +61,11 @@ START -> guard --refuse--> END                     (no model call; polite refusa
 - **enroll_agent**: the model is offered only `enroll_in_course(course_id)` and the last
   recommended courses, so it resolves "the second one" to an id. Code checks the id exists,
   is not completed and is not already enrolled. **confirm** calls `interrupt()`; the UI's
-  Confirm/Decline buttons resume it with a structured value. Free-text replies count as yes
-  only if they exactly match a short list (`yes`, `y`, `yes please`, `confirm`, `yes enroll me`).
-  Anything else ("maybe", "sure but later") cancels the pending enrollment.
+  Confirm/Decline buttons resume it with `{confirm, course_id}`, and a yes counts only if
+  `course_id` is the pending course (a stale click cannot confirm a newer proposal). Free-text
+  replies count as yes only if they exactly match a short list (`yes`, `y`, `yes please`,
+  `confirm`, `yes enroll me`) after lowercasing and removing only `. , !`. Anything else
+  ("maybe", "sure but later", "yes" plus words in any language) cancels the pending enrollment.
 
 ## State (one LangGraph thread per employee conversation)
 
@@ -151,7 +153,7 @@ Tests use a deterministic stub model (`evals/stub_llm.py`), never the real one.
 | `GET /api/employees` | | `[{id, name}]` for the demo sign-in picker |
 | `POST /api/chat` | `{employee_id, conversation_id, message}` | `{reply, recommendation, pending_enrollment, events, flagged, metrics}` |
 | `POST /api/chat/stream` | same | newline-delimited JSON: tool status events, then the final result |
-| `POST /api/confirm` | `{employee_id, conversation_id, confirm: bool}` | same as `/api/chat` |
+| `POST /api/confirm` | `{employee_id, conversation_id, confirm: bool, course_id}` | same as `/api/chat` |
 
 The React app (no state library, no CSS framework): `App`, `EmployeePicker`, `ChatLog`,
 `MessageInput`, `SuggestedPrompts`, `RecommendationCards`, `EnrollConfirm`, `MetricsLine`.

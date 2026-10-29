@@ -232,7 +232,7 @@ class Nodes:
         course_id = state["pending_course_id"]
         title = self.catalog.courses[course_id].title
         answer = interrupt({"course_id": course_id, "title": title, "question": render_enroll_question(course_id, title)})
-        if answer_is_yes(answer):
+        if answer_is_yes(answer, course_id):
             return {"enrollment_confirmed": True, "confirmed_course_id": course_id}
         return {"enrollment_confirmed": False, "confirmed_course_id": None, "pending_course_id": None,
                 "reply": prompts.NOT_ENROLLED, "outcome": "enroll_declined"}

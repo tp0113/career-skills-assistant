@@ -197,8 +197,8 @@ def test_a_vague_reply_cancels_and_writes_nothing(store, answer):
 def test_decline_button_writes_nothing(store):
     assistant, _ = make(store)
     recommended(assistant)
-    assistant.ask("E01", "c1", ENROLL_FIRST)
-    assert assistant.confirm("E01", "c1", False).outcome == "enroll_declined"
+    course = assistant.ask("E01", "c1", ENROLL_FIRST).pending_enrollment["course_id"]
+    assert assistant.confirm("E01", "c1", False, course).outcome == "enroll_declined"
     assert store.list_for("E01") == []
 
 
@@ -206,10 +206,38 @@ def test_confirm_writes_exactly_one_enrollment_and_replay_changes_nothing(store)
     assistant, _ = make(store)
     first = recommended(assistant)[0]["course_id"]
     assistant.ask("E01", "c1", ENROLL_FIRST)
-    done = assistant.confirm("E01", "c1", True)
+    done = assistant.confirm("E01", "c1", True, first)
     assert done.outcome == "enrolled" and store.list_for("E01") == [first]
-    again = assistant.confirm("E01", "c1", True)
+    again = assistant.confirm("E01", "c1", True, first)
     assert again.outcome == "nothing_pending" and store.list_for("E01") == [first]
+
+
+def test_a_stale_confirm_for_an_older_proposal_does_not_enroll_the_newer_one(store):
+    assistant, _ = make(store)
+    first, second = [c["course_id"] for c in recommended(assistant)[:2]]
+    assistant.ask("E01", "c1", ENROLL_FIRST)
+    assistant.confirm("E01", "c1", True, first)
+    assistant.ask("E01", "c1", "Enroll me in the second course")
+    replay = assistant.confirm("E01", "c1", True, first)  # the old button, clicked again
+    assert replay.outcome == "enroll_declined" and store.list_for("E01") == [first]
+    assert second not in store.list_for("E01")
+
+
+def test_a_button_shaped_dict_typed_through_ask_is_rejected(store):
+    assistant, _ = make(store)
+    recommended(assistant)
+    assistant.ask("E01", "c1", ENROLL_FIRST)
+    with pytest.raises(TypeError):
+        assistant.ask("E01", "c1", {"confirm": True, "course_id": "C99"})
+    assert store.list_for("E01") == []
+
+
+def test_a_yes_followed_by_words_in_another_language_cancels(store):
+    assistant, _ = make(store)
+    recommended(assistant)
+    assistant.ask("E01", "c1", ENROLL_FIRST)
+    assert assistant.ask("E01", "c1", "yes, 但不要报名").outcome == "enroll_declined"
+    assert store.list_for("E01") == []
 
 
 def test_typed_yes_also_enrolls(store):
@@ -222,9 +250,9 @@ def test_typed_yes_also_enrolls(store):
 
 def test_second_enroll_request_for_the_same_course_is_refused_politely(store):
     assistant, _ = make(store)
-    recommended(assistant)
+    first = recommended(assistant)[0]["course_id"]
     assistant.ask("E01", "c1", ENROLL_FIRST)
-    assistant.confirm("E01", "c1", True)
+    assistant.confirm("E01", "c1", True, first)
     result = assistant.ask("E01", "c1", ENROLL_FIRST)
     assert result.outcome == "enroll_refused" and "already enrolled" in result.reply
     assert len(store.list_for("E01")) == 1
@@ -247,9 +275,9 @@ def test_completed_course_cannot_be_enrolled(store):
 
 def test_a_new_recommendation_clears_a_stale_enrollment_choice(store):
     assistant, _ = make(store)
-    recommended(assistant)
+    first = recommended(assistant)[0]["course_id"]
     assistant.ask("E01", "c1", ENROLL_FIRST)
-    assistant.confirm("E01", "c1", False)
+    assistant.confirm("E01", "c1", False, first)
     recommended(assistant)
     state = assistant.state_of("E01", "c1")
     assert state["pending_course_id"] is None and state["enrollment_confirmed"] is False
