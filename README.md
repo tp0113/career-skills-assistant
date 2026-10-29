@@ -255,3 +255,14 @@ What I would build next, roughly in order of value:
 - **Streaming the answer** token by token, and a retry or second opinion when the 8B model fails validation, which is
   the main reason a recommendation sometimes ends in the apology message.
 - Out of scope: a second, cooperating agent.
+
+## AI assistance
+
+The brief allows AI coding assistants, and I used them:
+
+- An AI coding assistant helped me plan the work, write the code and tests, and draft this README. I made or
+  approved each design decision, and I ran the measurements in this README on my own laptop.
+- A second AI assistant reviewed the code three times as an outside check. It could run the code but not change it.
+  I reproduced every finding with a script, then fixed it with a test that failed on the old code, or listed it
+  under limitations.
+- At run time the app calls no hosted AI service: the model is `llama3.1:8b` running locally through Ollama.
