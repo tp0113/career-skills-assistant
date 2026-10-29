@@ -95,7 +95,7 @@ class Nodes:
     def route(self, state: State) -> dict:
         rec = state.get("recommendation")
         me = self.catalog.employees[state["employee_id"]]
-        names = (*me.name.split(), me.name)
+        names = (*me.name.split(), me.name, me.id)
         route, source, score = pick_route(
             state["user_message"], Recommendation.model_validate(rec) if rec else None, names, self.embed_router)
         return {"route": route, "route_source": source, "route_score": score}

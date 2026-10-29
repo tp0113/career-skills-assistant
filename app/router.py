@@ -49,7 +49,7 @@ _OWN_DATA = re.compile(
     re.IGNORECASE,
 )
 # The list word must come straight before the own-data phrase: "what is the weather on the last day of my course" fails.
-_PROFILE_FORM = re.compile(_LIST_START.pattern + r"\s+(?:the\s+|all\s+)?" + _OWN_DATA.pattern, re.IGNORECASE)
+_PROFILE_FORM = re.compile(_LIST_START.pattern + r"\s+(?:me\s+)?(?:the\s+|all\s+)?" + _OWN_DATA.pattern, re.IGNORECASE)
 # Any of these means the person wants advice, so "what courses fit my skills" is not a profile question.
 _WANTS_ADVICE = re.compile(
     r"\b(?:recommend\w*|suggest\w*|should|next|improve\w*|develop\w*|learn\w*|grow\w*|career|promotion|"
@@ -88,8 +88,10 @@ def _is_profile_question(message: str) -> bool:
 
 def _first_person(message: str, own_names: tuple[str, ...]) -> str:
     """"What are Marcus's skills?" from Marcus himself is a question about "my" skills (the guard let it through)."""
-    for name in own_names:
-        message = re.sub(rf"\b{re.escape(name)}(?:'s|’s)", "my", message, flags=re.IGNORECASE)
+    for name in sorted(own_names, key=len, reverse=True):  # "Elena Petrova" before "Elena"
+        escaped = re.escape(name)
+        message = re.sub(rf"\bdoes\s+{escaped}\b", "do I", message, flags=re.IGNORECASE)
+        message = re.sub(rf"\b{escaped}(?:'s|’s)", "my", message, flags=re.IGNORECASE)
     return message
 
 

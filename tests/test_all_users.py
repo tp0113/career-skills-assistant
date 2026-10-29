@@ -276,3 +276,22 @@ def test_class_and_registration_wording_shows_courses_not_skills(user, message):
 
     reply = render_profile(message, user, CATALOG, [])
     assert "Courses you have completed" in reply and "Your skills" not in reply
+
+
+@pytest.mark.parametrize("user", USERS)
+@pytest.mark.parametrize("template", [
+    "what skills does {id} have", "WHAT SKILLS DOES {id} HAVE", "show me {id}'s courses",
+    "what skills does {first} have", "what courses does {first} have", "show me {first}'s skills",
+])
+def test_asking_about_yourself_by_id_or_first_name_is_a_profile_question(assistant, user, template):
+    me = CATALOG.employees[user]
+    message = template.format(id=user, first=me.name.split()[0])
+    result = assistant.ask(user, "c1", message)
+    assert result.route == "profile" and result.usage["model_calls"] == 0 and me.name in result.reply, (message, result.route)
+
+
+@pytest.mark.parametrize("asker", USERS)
+def test_a_colleagues_id_is_still_refused_in_every_form(assistant, asker):
+    for other in others(asker):
+        for message in (f"what skills does {other} have", f"show me {other}'s courses", f"what skills does {other.lower()} have"):
+            assert assistant.ask(asker, "c1", message).route == "refuse", message
