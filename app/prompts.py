@@ -39,6 +39,14 @@ ADVISE_SYSTEM = (
 
 TOO_FEW_HINT = "Too few results so far. Search again with one or two different single words, for example a skill or a topic, instead of adding more words."
 
+
+def too_few_hint(missing_skills: list[str]) -> str:
+    """Keyword search only finds the catalog's own words, so a thin search gets the catalog's skill names.
+
+    The names come from skills.json (our seed data), not from retrieved text. The model still picks the words.
+    """
+    return f"{TOO_FEW_HINT} Skills in the catalog that the employee does not have yet: {', '.join(missing_skills)}."
+
 TOOL_REMINDER = "Please continue by calling one of the available tools. Do not reply with text."
 
 COMPOSE_SYSTEM = (

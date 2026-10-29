@@ -110,9 +110,22 @@ def test_a_search_that_leaves_too_few_items_does_not_count_and_the_model_tries_a
     result = assistant.ask("E01", "c1", MAIN)
     searches = [e for e in result.events if e["name"] == "search_courses"]
     assert [e["too_few"] for e in searches] == [True, False]
-    tool_texts = [m["content"] for c in stub.calls for m in c["messages"] if m.get("role") == "tool"]
-    assert any(prompts.TOO_FEW_HINT in text for text in tool_texts)
+    # The hint is its own user message right after the tool result (measured: inside the result it was ignored).
+    messages = [c for c in stub.calls if c["tools"]][-1]["messages"]
+    at = next(i for i, m in enumerate(messages) if m.get("role") == "user" and m["content"].startswith(prompts.TOO_FEW_HINT))
+    assert messages[at - 1]["role"] == "tool" and messages[at - 1]["tool_name"] == "search_courses"
     assert result.outcome == "ok" and result.usage["model_calls"] == 5
+
+
+def test_the_too_few_hint_lists_catalog_skills_the_employee_lacks(store):
+    assistant, stub = make(store, mode="too_few_search")
+    assistant.ask("E03", "c1", MAIN)
+    hint = next(m["content"] for c in stub.calls for m in c["messages"]
+                if m.get("role") == "user" and m["content"].startswith(prompts.TOO_FEW_HINT))
+    assert "Prompt engineering" in hint and "Python" in hint
+    # E03 already has these, so they are not suggested.
+    for held in ("Project management", "Stakeholder communication", "Agile delivery"):
+        assert held not in hint
 
 
 # ---- repair ---------------------------------------------------------------------------------

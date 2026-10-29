@@ -30,6 +30,18 @@ def _blocks(text: str) -> dict[str, object]:
     return {source: json.loads(body) for source, body in found}
 
 
+def _done_tools(messages: list[dict]) -> dict[str, str]:
+    """Successful tool results, except a search the graph answered with a "too few results" hint."""
+    done = {}
+    for i, m in enumerate(messages):
+        if m["role"] != "tool" or not m["content"].startswith("<untrusted_data"):
+            continue
+        after = messages[i + 1] if i + 1 < len(messages) else {}
+        if not (after.get("role") == "user" and after["content"].startswith("Too few results")):
+            done[m["tool_name"]] = m["content"]
+    return done
+
+
 class StubLLM:
     def __init__(self, mode: str = "cooperative", compose_replies: list[Scripted] | None = None) -> None:
         self.mode = mode
@@ -52,9 +64,7 @@ class StubLLM:
     # ---- tool calling -----------------------------------------------------------------------
 
     def _advise(self, messages: list[dict], offered: list[str]) -> LLMReply:
-        done = {m["tool_name"]: m["content"] for m in messages
-                if m["role"] == "tool" and m["content"].startswith("<untrusted_data")
-                and "Too few results" not in m["content"]}
+        done = _done_tools(messages)
         if self.mode == "enroll_early" and not self._tried_early:
             self._tried_early = True
             return self._call("enroll_in_course", {"course_id": "C04"})

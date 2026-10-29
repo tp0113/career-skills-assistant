@@ -123,8 +123,10 @@ class Nodes:
         for call in state["pending_calls"]:
             result = execute_tool(call["name"], call["arguments"], session, ctx)
             too_few = result.ok and call["name"] in SEARCHES and not _enough(call["name"], ctx)
-            content = result.content_for_model + ("\n" + prompts.TOO_FEW_HINT if too_few else "")
-            messages.append({"role": "tool", "tool_name": call["name"], "content": content})
+            messages.append({"role": "tool", "tool_name": call["name"], "content": result.content_for_model})
+            if too_few:
+                hint = prompts.too_few_hint(self._missing_skill_names(state["employee_id"]))
+                messages.append({"role": "user", "content": hint})
             events.append({"type": "tool", "name": call["name"], "arguments": call["arguments"],
                            "ok": result.ok, "error": result.error, "too_few": too_few})
             # A search that leaves too few items does not count: the model must try again with other words.
@@ -135,6 +137,11 @@ class Nodes:
         return {"llm_messages": messages, "events": events, "called_tools": called, "profile": profile,
                 "pending_calls": [], "retrieved_courses": ctx.retrieved_courses,
                 "retrieved_jobs": ctx.retrieved_jobs, "flagged": ctx.flagged}
+
+    def _missing_skill_names(self, employee_id: str) -> list[str]:
+        """Catalog skills the employee lacks, in id order: words the keyword search is sure to know."""
+        held = set(self.catalog.employees[employee_id].skills)
+        return [skill.name for sid, skill in sorted(self.catalog.skills.items()) if sid not in held]
 
     def compose(self, state: State) -> dict:
         """The one structured-output call (F10). On a repair the messages already hold the errors."""

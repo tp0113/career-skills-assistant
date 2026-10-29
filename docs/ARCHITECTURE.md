@@ -47,8 +47,9 @@ START -> guard --refuse--> END                     (no model call; polite refusa
   generic query. If the model answers in prose instead of calling a tool, the graph adds a
   short reminder and asks again. Malformed arguments or unknown tools produce an error tool
   message. A search counts as done only when enough items have been retrieved this turn (2 courses,
-  1 job, the minimums the answer needs); otherwise the result carries a hint and the model searches
-  again. After 6 steps without the required calls, `tool_fallback` returns a graceful
+  1 job, the minimums the answer needs); otherwise a short user message follows the result with
+  the catalog's skill names the employee lacks (keyword search only finds the catalog's own words),
+  and the model searches again with words it chooses. After 6 steps without the required calls, `tool_fallback` returns a graceful
   message and no recommendation.
 - **compose**: one model call with Ollama's JSON-schema `format`, given the profile, the
   retrieved courses and jobs, and the candidate skills (skills required by retrieved jobs or
