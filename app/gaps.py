@@ -4,7 +4,7 @@ The roles come from the employee's own career interest (the same keyword search 
 every line below can be traced to a data file. Postings the injection filter flags are skipped.
 """
 from app.data import Catalog, Job
-from app.injection import scan_text
+from app.injection import scan_text, shown
 from app.retrieval import search_jobs
 
 MAX_ROLES = 2
@@ -33,7 +33,11 @@ def _courses_teaching(catalog: Catalog, skill_ids: list[str], completed: set[str
     wanted = set(skill_ids)
     covering = [(len(wanted & set(c.skills)), c) for c in catalog.courses.values() if c.id not in completed]
     covering = sorted((row for row in covering if row[0]), key=lambda row: (-row[0], row[1].id))
-    return [f"{c.title} [{c.id}]" for _, c in covering[:MAX_COURSES]]
+    return [f"{shown(c.title)} [{c.id}]" for _, c in covering[:MAX_COURSES]]
+
+
+def _names(catalog: Catalog, skill_ids: list[str]) -> str:
+    return ", ".join(shown(name) for name in catalog.skill_names(skill_ids))
 
 
 def render_gaps(employee_id: str, catalog: Catalog) -> str:
@@ -41,13 +45,13 @@ def render_gaps(employee_id: str, catalog: Catalog) -> str:
     roles = _roles_for_interest(catalog, me.career_interest)
     if not roles:
         return NO_INTEREST_MATCH
-    lines = [f"Your career interest is: {me.career_interest}. Here is how the closest roles compare with your skills."]
+    lines = [f"Your career interest is: {shown(me.career_interest)}. Here is how the closest roles compare with your skills."]
     for job in roles:
         have = [s for s in job.required_skills if s in me.skills]
         missing = [s for s in job.required_skills if s not in me.skills]
         lines += ["", f"{job.title} [{job.id}]",
-                  f"- You have: {', '.join(catalog.skill_names(have)) or 'none of the required skills yet'}",
-                  f"- Missing: {', '.join(catalog.skill_names(missing)) or 'nothing, you have them all'}"]
+                  f"- You have: {_names(catalog, have) or 'none of the required skills yet'}",
+                  f"- Missing: {_names(catalog, missing) or 'nothing, you have them all'}"]
         courses = _courses_teaching(catalog, missing, set(me.completed_courses))
         if missing and courses:
             lines.append(f"- Courses that teach them: {'; '.join(courses)}")

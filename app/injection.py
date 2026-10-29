@@ -29,3 +29,9 @@ def scan_text(text: str) -> tuple[str, list[str]]:
         else:
             kept.append(line)
     return "\n".join(kept).strip(), flags
+
+
+def shown(text: str) -> str:
+    """Data text as it may be printed to the user by code (profile, gaps): instruction-like lines removed.
+    No model reads these answers, but the data is still untrusted (Codex 3 finding 2)."""
+    return scan_text(text)[0]
