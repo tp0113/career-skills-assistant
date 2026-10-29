@@ -245,6 +245,4 @@ What I would build next, roughly in order of value:
 - **Real sign-in** instead of the demo picker, and a manager view with consent rules, which needs a design of its own.
 - **Streaming the answer** token by token, and a retry or second opinion when the 8B model fails validation, which is
   the main reason a recommendation sometimes ends in the apology message.
-- **Housekeeping found while testing:** the privacy guard refuses an employee's own full name with a possessive
-  ("What are Priya Shah's skills?"); it should allow it.
 - Out of scope: a second, cooperating agent.
