@@ -4,6 +4,7 @@ Flow (docs/ARCHITECTURE.md): guard -> route -> advise_agent <-> run_tools -> com
 -> respond, followup (no model), or enroll_agent -> confirm (interrupt) -> enroll. The thread id is
 "{employee_id}:{conversation_id}", so two employees never share state (F19).
 """
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from langgraph.checkpoint.memory import InMemorySaver
@@ -83,15 +84,25 @@ class Assistant:
     def _is_paused(self, config: dict) -> bool:
         return _interrupt_value(self.graph.get_state(config)) is not None
 
-    def ask(self, employee_id: str, conversation_id: str, message: str) -> TurnResult:
+    def _run(self, graph_input, config: dict, on_call: Callable[[str], None] | None) -> None:
+        """Run the graph. `on_call(tool_name)` fires when the model has chosen a tool, before it runs (for the UI status)."""
+        for update in self.graph.stream(graph_input, config, stream_mode="updates"):
+            if on_call is None:
+                continue
+            for node_update in update.values():
+                for call in (node_update or {}).get("pending_calls") or []:
+                    on_call(call["name"])
+
+    def ask(self, employee_id: str, conversation_id: str, message: str,
+            on_call: Callable[[str], None] | None = None) -> TurnResult:
         """A new message. If the thread is waiting at the confirm step, the text is the answer to it."""
         if not isinstance(message, str):
             raise TypeError("message must be text; buttons use confirm()")
         config = self._config(employee_id, conversation_id)
         if self._is_paused(config):
-            self.graph.invoke(Command(resume=message), config)
+            self._run(Command(resume=message), config, on_call)
         else:
-            self.graph.invoke({"employee_id": employee_id, "user_message": message}, config)
+            self._run({"employee_id": employee_id, "user_message": message}, config, on_call)
         return self._result(config)
 
     def confirm(self, employee_id: str, conversation_id: str, confirm: bool, course_id: str) -> TurnResult:
@@ -99,7 +110,7 @@ class Assistant:
         config = self._config(employee_id, conversation_id)
         if not self._is_paused(config):
             return TurnResult(reply=prompts.NOTHING_PENDING, outcome="nothing_pending")
-        self.graph.invoke(Command(resume={"confirm": confirm, "course_id": course_id}), config)
+        self._run(Command(resume={"confirm": confirm, "course_id": course_id}), config, None)
         return self._result(config)
 
     def _result(self, config: dict) -> TurnResult:
