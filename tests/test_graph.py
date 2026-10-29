@@ -8,6 +8,7 @@ from app.config import load_settings
 from app.data import load_catalog
 from app.enrollments import EnrollmentStore
 from app.graph import Assistant
+from app.nodes import Nodes
 from evals.stub_llm import StubLLM
 
 SETTINGS = load_settings()
@@ -274,13 +275,14 @@ def test_completed_course_cannot_be_enrolled(store):
 
 
 def test_a_new_recommendation_clears_a_stale_enrollment_choice(store):
+    # The public path always clears these fields first, so the node is called directly with stale ones.
     assistant, _ = make(store)
-    first = recommended(assistant)[0]["course_id"]
-    assistant.ask("E01", "c1", ENROLL_FIRST)
-    assistant.confirm("E01", "c1", False, first)
-    recommended(assistant)
-    state = assistant.state_of("E01", "c1")
-    assert state["pending_course_id"] is None and state["enrollment_confirmed"] is False
+    draft = assistant.ask("E01", "c1", MAIN).recommendation
+    nodes = Nodes(CATALOG, StubLLM(), store, defense=True)
+    update = nodes.respond({"draft": draft, "pending_course_id": "C09", "enrollment_confirmed": True,
+                            "confirmed_course_id": "C09"})
+    assert update["pending_course_id"] is None and update["enrollment_confirmed"] is False
+    assert update["confirmed_course_id"] is None
 
 
 # ---- threads --------------------------------------------------------------------------------
