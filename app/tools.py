@@ -11,6 +11,8 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.data import Catalog
+from app.injection import scan_text
+from app.retrieval import search_courses, search_jobs
 from app.session import Session
 
 
@@ -114,8 +116,41 @@ def _propose_enrollment(args: CourseArgs) -> ToolResult:
     )
 
 
-def _search_unavailable() -> ToolResult:
-    return _fail("search is not available yet")
+def _trim(text: str, limit: int = 200) -> str:
+    """Keep prompts small (PLAN 3.8): descriptions are cut to 200 characters."""
+    return text if len(text) <= limit else text[: limit - 3].rstrip() + "..."
+
+
+def _quarantine(rows: list[dict], source: str, ctx: ToolContext) -> list[dict]:
+    """Drop items whose text looks like instructions and remember why (F18). No-op if defense is off."""
+    if not ctx.defense:
+        return rows
+    kept = []
+    for row in rows:
+        flags = scan_text(row["title"])[1] + scan_text(row["description"])[1]
+        if flags:
+            ctx.flagged.append({"id": row["id"], "title": row["title"], "source": source, "reasons": flags})
+        else:
+            kept.append(row)
+    return kept
+
+
+def _finish_search(source: str, key: str, rows: list[dict], store: dict[str, dict], ctx: ToolContext) -> ToolResult:
+    rows = [{**row, "description": _trim(row["description"])} for row in _quarantine(rows, source, ctx)]
+    for row in rows:
+        store[row["id"]] = row
+    return _wrap(source, {key: rows})
+
+
+def _courses(args: QueryArgs, session: Session, ctx: ToolContext) -> ToolResult:
+    done = frozenset(ctx.catalog.employees[session.employee_id].completed_courses)
+    rows = search_courses(ctx.catalog, args.query, exclude_ids=done)
+    return _finish_search("search_courses", "courses", rows, ctx.retrieved_courses, ctx)
+
+
+def _jobs(args: QueryArgs, ctx: ToolContext) -> ToolResult:
+    rows = search_jobs(ctx.catalog, args.query)
+    return _finish_search("search_jobs", "jobs", rows, ctx.retrieved_jobs, ctx)
 
 
 def execute_tool(name: str, raw_args: dict | str | None, session: Session, ctx: ToolContext) -> ToolResult:
@@ -132,4 +167,6 @@ def execute_tool(name: str, raw_args: dict | str | None, session: Session, ctx: 
         return _profile(session, ctx)
     if name == "enroll_in_course":
         return _propose_enrollment(args)
-    return _search_unavailable()
+    if name == "search_courses":
+        return _courses(args, session, ctx)
+    return _jobs(args, ctx)

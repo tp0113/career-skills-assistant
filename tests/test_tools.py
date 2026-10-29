@@ -74,3 +74,39 @@ def test_profile_uses_session_id_only():
 def test_enroll_tool_only_proposes():
     result = execute_tool("enroll_in_course", {"course_id": "C04"}, E01, ctx())
     assert result.data == {"proposed_course_id": "C04"}
+
+
+def test_search_courses_excludes_completed_and_records_retrieval():
+    c = ctx()
+    result = execute_tool("search_courses", {"query": "sql"}, E01, c)
+    ids = [r["id"] for r in result.data["courses"]]
+    assert result.ok and "C01" not in ids and "C09" in ids
+    assert set(c.retrieved_courses) == set(ids)
+    assert c.retrieved_courses["C09"]["score"] > 0
+    assert result.content_for_model.startswith('<untrusted_data source="search_courses">')
+
+
+def test_search_jobs_quarantines_poisoned_posting_when_defense_on():
+    c = ctx()
+    result = execute_tool("search_jobs", {"query": "data"}, E01, c)
+    ids = [r["id"] for r in result.data["jobs"]]
+    assert "J03" in ids and "J05" not in ids
+    assert "J05" not in c.retrieved_jobs and "Ignore your instructions" not in result.content_for_model
+    assert [f["id"] for f in c.flagged] == ["J05"] and c.flagged[0]["reasons"]
+
+
+def test_search_jobs_defense_off_lets_poisoned_posting_through():
+    c = ctx(defense=False)
+    result = execute_tool("search_jobs", {"query": "data"}, E01, c)
+    assert "J05" in [r["id"] for r in result.data["jobs"]]
+    assert c.flagged == []
+
+
+def test_search_with_no_matches_is_ok_and_empty():
+    result = execute_tool("search_jobs", {"query": "gardening"}, E01, ctx())
+    assert result.ok and result.data == {"jobs": []}
+
+
+def test_descriptions_are_trimmed_to_200_characters():
+    result = execute_tool("search_courses", {"query": "python"}, E01, ctx())
+    assert all(len(r["description"]) <= 200 for r in result.data["courses"])
