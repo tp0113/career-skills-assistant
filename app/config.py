@@ -35,7 +35,8 @@ def _path(name: str, default: str) -> Path:
 def load_settings() -> Settings:
     return Settings(
         llm_provider=os.getenv("LLM_PROVIDER", "ollama").lower(),
-        ollama_url=os.getenv("OLLAMA_URL", "http://localhost:11434").rstrip("/"),
+        # 127.0.0.1, not localhost: on Windows localhost tries IPv6 first, and Ollama listens on IPv4 only.
+        ollama_url=os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/"),
         ollama_model=os.getenv("OLLAMA_MODEL", "llama3.1:8b"),
         ollama_num_ctx=int(os.getenv("OLLAMA_NUM_CTX", "8192")),
         anthropic_model=os.getenv("ANTHROPIC_MODEL", "claude-haiku-5-5"),

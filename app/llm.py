@@ -13,6 +13,8 @@ import httpx
 from app.config import Settings
 
 TIMEOUT_SECONDS = 120.0
+# A local server answers a connect at once. Without its own limit, a hung connect waits the full 120 s.
+CONNECT_TIMEOUT_SECONDS = 5.0
 
 
 class LLMError(Exception):
@@ -38,7 +40,7 @@ class LLM(Protocol):
 class OllamaLLM:
     def __init__(self, settings: Settings, client: httpx.Client | None = None) -> None:
         self.settings = settings
-        self.client = client or httpx.Client(timeout=TIMEOUT_SECONDS)
+        self.client = client or httpx.Client(timeout=httpx.Timeout(TIMEOUT_SECONDS, connect=CONNECT_TIMEOUT_SECONDS))
 
     def _payload(self, messages: list[dict], tools: list[dict] | None, json_schema: dict | None) -> dict:
         payload: dict = {

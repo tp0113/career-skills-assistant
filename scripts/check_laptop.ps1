@@ -31,7 +31,7 @@ try { ollama list } catch { Write-Host "ollama not running" -ForegroundColor Red
 
 Write-Host "`n== Warm-up (num_ctx=8192, the setting the app uses) =="
 $model = if ($env:OLLAMA_MODEL) { $env:OLLAMA_MODEL } else { "llama3.1:8b" }
-$url = if ($env:OLLAMA_URL) { $env:OLLAMA_URL } else { "http://localhost:11434" }
+$url = if ($env:OLLAMA_URL) { $env:OLLAMA_URL } else { "http://127.0.0.1:11434" }
 try {
     $body = @{ model = $model; stream = $false; options = @{ num_ctx = 8192 };
                messages = @(@{ role = "user"; content = "Say ready." }) } | ConvertTo-Json -Depth 5

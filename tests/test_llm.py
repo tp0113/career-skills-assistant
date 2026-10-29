@@ -65,6 +65,16 @@ def test_connection_error_becomes_llm_error():
         llm.chat([])
 
 
+def test_connect_has_its_own_short_timeout():
+    timeout = OllamaLLM(SETTINGS).client.timeout
+    assert timeout.connect == 5.0 and timeout.read == 120.0
+
+
+def test_default_url_uses_ipv4_not_localhost(monkeypatch):
+    monkeypatch.delenv("OLLAMA_URL", raising=False)
+    assert load_settings().ollama_url == "http://127.0.0.1:11434"
+
+
 def test_unsupported_provider_is_rejected():
     with pytest.raises(LLMError):
         get_llm(replace(SETTINGS, llm_provider="nope"))
