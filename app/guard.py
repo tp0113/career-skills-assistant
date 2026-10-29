@@ -62,6 +62,12 @@ def _allowed_possessives(catalog: Catalog, me: Employee) -> set[str]:
     return allowed
 
 
+def _own_full_name_as_first(text: str, me: Employee) -> str:
+    """"Priya Shah's" -> "Priya's" before rule 2. Only the whole name: a bare "Shah's" could be a relative."""
+    first = me.name.split()[0]
+    return re.sub(rf"\b{re.escape(me.name)}'s\b", f"{first}'s", text, flags=re.IGNORECASE)
+
+
 def _has_foreign_possessive(text: str, allowed: set[str]) -> bool:
     return any(word.lower() not in allowed for word in _POSSESSIVE.findall(text))
 
@@ -86,7 +92,7 @@ def check_privacy(message: str, session: Session, catalog: Catalog) -> str | Non
     others = _others(catalog, session)
     refused = (
         _mentions_other_employee(text, others)
-        or _has_foreign_possessive(text, _allowed_possessives(catalog, me))
+        or _has_foreign_possessive(_own_full_name_as_first(text, me), _allowed_possessives(catalog, me))
         or _GROUP_PHRASES.search(text) is not None
         or _claims_to_be_other(text, others)
     )

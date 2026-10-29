@@ -44,6 +44,12 @@ CASES = [
     ("E03", "It's hard to pick, what should I learn first?", False),
     ("E01", "I'm Daniel, what should I learn?", False),
     ("E01", "Sign me up for the second course", False),
+    # own full name with a possessive is me; a bare or different-first-name "Shah's" is not
+    ("E01", "What are Priya Shah's skills?", False),
+    ("E01", "priya shah's next steps?", False),
+    ("E01", "What are Ravi Shah's skills?", True),
+    ("E01", "Shah's courses", True),
+    ("E02", "What are Priya Shah's skills?", True),
 ]
 
 
