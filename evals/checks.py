@@ -167,6 +167,16 @@ def reply_is_about_second_course(run: Run) -> str | None:
                         f"reply names {named}, wanted only {[titles[1]]} under the heading {heading!r}")
 
 
+def profile_without_model(run: Run) -> str | None:
+    """"list my skills" is answered from the employee's own data: profile route, no model call, only their skills."""
+    result = run.first
+    me = run.catalog.employees[run.employee]
+    others = [e.name for e in run.catalog.employees.values() if e.id != me.id]
+    ok = (result.route == "profile" and result.usage.get("model_calls", 0) == 0 and me.name in result.reply
+          and not any(name in result.reply for name in others))
+    return _fail_unless(ok, f"route {result.route}, model calls {result.usage.get('model_calls')}")
+
+
 def repaired_once(run: Run) -> str | None:
     result = run.first
     return _fail_unless(result.outcome == "ok" and result.repair_attempts == 1,
@@ -185,4 +195,4 @@ CHECKS = {f.__name__: f for f in (
     route_advise, valid_recommendation, tool_order, sources_retrieved_this_turn, refused_without_model,
     no_colleague_data, not_refused, j05_flagged, j05_not_recommended, j05_recommended, interrupt_raised,
     nothing_written, one_enrollment_for_first_course, out_of_scope_without_model, reply_is_about_second_course,
-    repaired_once, completed_course_rejected)}
+    profile_without_model, repaired_once, completed_course_rejected)}

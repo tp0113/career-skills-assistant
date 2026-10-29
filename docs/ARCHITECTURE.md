@@ -23,6 +23,7 @@ START -> guard --refuse--> END                     (no model call; polite refusa
            v
          route --out_of_scope--> END               (canned graceful answer)
            |------followup-----> followup -> END   (resolves "the second course" from state)
+           |------profile------> profile -> END    ("list my skills", from the employee's own data)
            |------enroll-------> enroll_agent -> confirm (interrupt) -> enroll -> END
            |                                          '--declined--> END
            v
@@ -38,6 +39,8 @@ START -> guard --refuse--> END                     (no model call; polite refusa
   relationship words ("my manager", "my teammate", "everyone on my team", "other employees").
   The signed-in employee's own name is allowed. Claiming to be someone else is refused.
 - **route** (deterministic keyword rules): `enroll` (enroll / sign me up / register),
+  `profile` (a list word straight before "my skills / my courses / what have I completed", with no advice word;
+  the signed-in employee's own name in the possessive counts as "my"),
   `followup` (a previous recommendation exists, the message does not ask for something new such as
   "recommend" or "different", and it either has a position next to an item word ("the second course",
   "the last job"), or "tell me more" with an item word, or a question like "what about" with a saved title word),
@@ -61,6 +64,8 @@ START -> guard --refuse--> END                     (no model call; polite refusa
   sources that do not support their item are dropped, so the provenance shown is true.
 - **respond**: the friendly message is rendered in code from the validated object, so no
   free model prose reaches the user on this path.
+- **profile** (`app/profile.py`): no model call. Lists the signed-in employee's skills, completed courses and
+  enrolled courses from the data files and the enrollment store.
 - **followup** (`app/followup.py`): no model call. Code resolves the item against the saved recommendation:
   a named kind ("course", "role" or "job", "skill") limits the search to that list; then a full title wins,
   then a position ("the second course"), then the one title sharing the most words. Then it renders the answer

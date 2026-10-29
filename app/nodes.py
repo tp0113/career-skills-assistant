@@ -11,7 +11,8 @@ from app.followup import render_followup
 from app.guard import check_privacy
 from app.llm import LLM, LLMError, LLMReply
 from app.render import render_enroll_question, render_enrolled, render_recommendation
-from app.router import ADVISE, ENROLL, FOLLOWUP, OUT_OF_SCOPE, route_message
+from app.profile import render_profile
+from app.router import ADVISE, ENROLL, FOLLOWUP, OUT_OF_SCOPE, PROFILE as PROFILE_ROUTE, route_message
 from app.schemas import Recommendation, recommendation_json_schema
 from app.session import Session
 from app.state import MAX_AGENT_STEPS, MAX_REPAIRS, State, fresh_turn
@@ -89,7 +90,15 @@ class Nodes:
 
     def route(self, state: State) -> dict:
         rec = state.get("recommendation")
-        return {"route": route_message(state["user_message"], Recommendation.model_validate(rec) if rec else None)}
+        me = self.catalog.employees[state["employee_id"]]
+        names = (*me.name.split(), me.name)
+        return {"route": route_message(state["user_message"], Recommendation.model_validate(rec) if rec else None, names)}
+
+    def profile(self, state: State) -> dict:
+        """Answer "list my skills" from the signed-in employee's own data. No model call."""
+        enrolled = self.store.list_for(state["employee_id"])
+        return {"reply": render_profile(state["user_message"], state["employee_id"], self.catalog, enrolled),
+                "outcome": "profile"}
 
     def out_of_scope(self, state: State) -> dict:
         return {"reply": prompts.OUT_OF_SCOPE, "outcome": "out_of_scope"}
@@ -271,7 +280,8 @@ def after_guard(state: State) -> str:
 
 
 def after_route(state: State) -> str:
-    return {ENROLL: "enroll_agent", ADVISE: "advise_agent", FOLLOWUP: "followup", OUT_OF_SCOPE: "out_of_scope"}[state["route"]]
+    return {ENROLL: "enroll_agent", ADVISE: "advise_agent", FOLLOWUP: "followup", OUT_OF_SCOPE: "out_of_scope",
+            PROFILE_ROUTE: "profile"}[state["route"]]
 
 
 def after_agent(state: State) -> str:

@@ -23,7 +23,7 @@ from app.state import State
 def build_graph(catalog: Catalog, llm: LLM, store: EnrollmentStore, defense: bool, checkpointer=None):
     nodes = n.Nodes(catalog, llm, store, defense)
     graph = StateGraph(State)
-    for name in ("guard", "route", "out_of_scope", "followup", "tool_fallback", "advise_agent", "run_tools", "compose",
+    for name in ("guard", "route", "out_of_scope", "followup", "profile", "tool_fallback", "advise_agent", "run_tools", "compose",
                  "validate", "respond", "enroll_agent", "confirm", "enroll"):
         graph.add_node(name, getattr(nodes, name))
     graph.set_entry_point("guard")
@@ -31,7 +31,7 @@ def build_graph(catalog: Catalog, llm: LLM, store: EnrollmentStore, defense: boo
     graph.add_conditional_edges("guard", n.after_guard, {"route": "route", **end})
     graph.add_conditional_edges("route", n.after_route, {
         "enroll_agent": "enroll_agent", "advise_agent": "advise_agent", "followup": "followup",
-        "out_of_scope": "out_of_scope"})
+        "out_of_scope": "out_of_scope", "profile": "profile"})
     graph.add_conditional_edges("advise_agent", n.after_agent, {
         "run_tools": "run_tools", "advise_agent": "advise_agent", "tool_fallback": "tool_fallback", **end})
     graph.add_conditional_edges("run_tools", n.after_tools, {
@@ -40,7 +40,7 @@ def build_graph(catalog: Catalog, llm: LLM, store: EnrollmentStore, defense: boo
     graph.add_conditional_edges("validate", n.after_validate, {"respond": "respond", "compose": "compose", **end})
     graph.add_conditional_edges("enroll_agent", n.after_enroll_agent, {"confirm": "confirm", **end})
     graph.add_conditional_edges("confirm", n.after_confirm, {"enroll": "enroll", **end})
-    for name in ("out_of_scope", "followup", "tool_fallback", "respond", "enroll"):
+    for name in ("out_of_scope", "followup", "profile", "tool_fallback", "respond", "enroll"):
         graph.add_edge(name, END)
     return graph.compile(checkpointer=checkpointer or InMemorySaver())
 

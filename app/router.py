@@ -12,6 +12,7 @@ ENROLL = "enroll"
 FOLLOWUP = "followup"
 ADVISE = "advise"
 OUT_OF_SCOPE = "out_of_scope"
+PROFILE = "profile"
 
 _ENROLL = re.compile(r"\b(?:enrol{1,2}|sign\s+me\s+up|register\s+me|sign\s+up\s+for)\b", re.IGNORECASE)
 # "the second course", "that one", "the last machine learning course": a position, then the item word
@@ -34,6 +35,24 @@ _ADVISE = re.compile(
     r"\b(?:skills?|learn\w*|courses?|career|roles?|jobs?|grow\w*|develop\w*|next\s+step|promotion|improve\w*)\b",
     re.IGNORECASE,
 )
+# "list my skills", "what are my courses", "what have I completed": a plain question about own data.
+_LIST_START = re.compile(r"^\W*(?:please\s+)?(?:list|show|display|what(?:'s|\s+are|\s+is)?|which|tell\s+me|give\s+me)\b", re.IGNORECASE)
+# The own-data phrase must end the message ("... my course?"), so "the weather on the last day of my course" is not one.
+_OWN_DATA = re.compile(
+    r"(?:\bmy\s+(?:current\s+|completed\s+)?(?:skills?|courses?|training|profile)(?:\s+and\s+(?:my\s+)?(?:skills?|courses?))?"
+    r"|\b(?:skills?|courses?)\s+(?:do\s+|have\s+)?i\s+(?:have|know|completed|finished|taken)"
+    r"|\bwhat\s+have\s+i\s+(?:completed|taken|finished))"
+    r"(?:\s+(?:so\s+far|currently|now|please))*\W*$",
+    re.IGNORECASE,
+)
+# The list word must come straight before the own-data phrase: "what is the weather on the last day of my course" fails.
+_PROFILE_FORM = re.compile(_LIST_START.pattern + r"\s+(?:the\s+|all\s+)?" + _OWN_DATA.pattern, re.IGNORECASE)
+# Any of these means the person wants advice, so "what courses fit my skills" is not a profile question.
+_WANTS_ADVICE = re.compile(
+    r"\b(?:recommend\w*|suggest\w*|should|next|improve\w*|develop\w*|learn\w*|grow\w*|career|promotion|"
+    r"missing|lack\w*|need\w*|fit|best|new|role|job)s?\b",
+    re.IGNORECASE,
+)
 # Title words too common to identify one recommended item.
 _GENERIC_TITLE_WORDS = {"basics", "essentials", "introduction", "foundations", "applications", "engineer", "manager", "technical"}
 
@@ -54,9 +73,22 @@ def _is_followup(message: str, rec: Recommendation | None) -> bool:
     return bool(_ASKS_ABOUT.search(message) and _title_words(rec) & set(tokenize(message)))
 
 
-def route_message(message: str, recommendation: Recommendation | None = None) -> str:
+def _is_profile_question(message: str) -> bool:
+    return bool(_PROFILE_FORM.match(message) and not _WANTS_ADVICE.search(message))
+
+
+def _first_person(message: str, own_names: tuple[str, ...]) -> str:
+    """"What are Marcus's skills?" from Marcus himself is a question about "my" skills (the guard let it through)."""
+    for name in own_names:
+        message = re.sub(rf"\b{re.escape(name)}(?:'s|’s)", "my", message, flags=re.IGNORECASE)
+    return message
+
+
+def route_message(message: str, recommendation: Recommendation | None = None, own_names: tuple[str, ...] = ()) -> str:
     if _ENROLL.search(message):
         return ENROLL
+    if _is_profile_question(_first_person(message, own_names)):
+        return PROFILE
     if _is_followup(message, recommendation):
         return FOLLOWUP
     if _ADVISE.search(message):

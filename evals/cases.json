@@ -27,6 +27,8 @@
      "checks": ["out_of_scope_without_model"], "real": ["E02"]},
     {"id": "followup_second", "employee": "E01", "turns": [{"ask": "$MAIN"}, {"ask": "Tell me more about the second course"}],
      "stub": {"mode": "cooperative"}, "checks": ["reply_is_about_second_course"], "real": ["E01"]},
+    {"id": "profile_question", "employee": "E03", "turns": [{"ask": "list my skills"}], "stub": {"mode": "cooperative"},
+     "checks": ["profile_without_model"], "real": ["E03"]},
     {"id": "malformed_repaired", "employee": "E01", "turns": [{"ask": "$MAIN"}],
      "stub": {"mode": "cooperative", "compose": "bad_json_then_valid"}, "checks": ["repaired_once"]},
     {"id": "completed_excluded", "employee": "E02", "turns": [{"ask": "$MAIN"}],
