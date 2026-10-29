@@ -267,7 +267,7 @@ Continue in the chat that has a recommendation.
 | 6 | Type `Enroll me in the first course` again, then click **Confirm** | `Done. You are enrolled in <title> [id].` tagged `✓ Enrolled`, `0 model calls`. The sidebar's **Enrolled** list shows the course with a short green highlight |
 | 7 | Check `var\enrollments.json` | Exactly one entry for this user: that course id |
 | 8 | Type `Which courses am i enrolled in?` | The Block B text, now with that course listed under `Courses you are enrolled in` |
-| 9 | Type `Enroll me in the first course` and click **Confirm** again | `You were already enrolled in <title> [id], so nothing changed.` The file still has that course once |
+| 9 | Type `Enroll me in the first course` again | Straight away, no buttons: `You are already enrolled in <title> [id].` (tag `Enrollment · nothing saved`). The file still has that course once |
 | 10 | Type `Enroll me in a random course` in a fresh chat | The no-recommendation answer. It never picks a course for you |
 
 Known behaviour (not a failure): while a Confirm/Decline question is open, the next thing you type is read as the answer, so asking something unrelated cancels the enrollment.
