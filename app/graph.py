@@ -90,7 +90,9 @@ class Assistant:
             if on_call is None:
                 continue
             for node_update in update.values():
-                for call in (node_update or {}).get("pending_calls") or []:
+                # The pause at the confirm step arrives as a tuple of interrupts, not a dict of fields.
+                updates = node_update if isinstance(node_update, dict) else {}
+                for call in updates.get("pending_calls") or []:
                     on_call(call["name"])
 
     def ask(self, employee_id: str, conversation_id: str, message: str,

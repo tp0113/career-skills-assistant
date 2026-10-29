@@ -116,3 +116,12 @@ def test_stream_reports_an_unknown_employee_as_an_error_line(env):
     client, _, _ = env
     response = client.post("/api/chat/stream", json={"employee_id": "E99", "conversation_id": "c1", "message": MAIN})
     assert json.loads(response.text.splitlines()[-1])["status"] == 404
+
+
+def test_stream_handles_the_enroll_pause(env):
+    client, store, _ = env
+    body = {"employee_id": "E01", "conversation_id": "c1", "message": MAIN}
+    client.post("/api/chat/stream", json=body)
+    response = client.post("/api/chat/stream", json={**body, "message": "Enroll me in the first course"})
+    last = json.loads(response.text.splitlines()[-1])
+    assert last["type"] == "result" and last["pending_enrollment"] and store.list_for("E01") == []
