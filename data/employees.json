@@ -1,0 +1,49 @@
+{
+  "_note": "Synthetic data for a demo. Not real people.",
+  "items": [
+    {
+      "id": "E01",
+      "name": "Priya Shah",
+      "current_role": "Data Analyst",
+      "skills": [
+        "S02",
+        "S03",
+        "S04",
+        "S15"
+      ],
+      "completed_courses": [
+        "C01"
+      ],
+      "career_interest": "Move into machine learning engineering"
+    },
+    {
+      "id": "E02",
+      "name": "Marcus Okafor",
+      "current_role": "Frontend Developer",
+      "skills": [
+        "S12",
+        "S11",
+        "S13",
+        "S16"
+      ],
+      "completed_courses": [
+        "C07"
+      ],
+      "career_interest": "Build AI-powered applications"
+    },
+    {
+      "id": "E03",
+      "name": "Elena Petrova",
+      "current_role": "Project Coordinator",
+      "skills": [
+        "S14",
+        "S15",
+        "S16"
+      ],
+      "completed_courses": [
+        "C10"
+      ],
+      "career_interest": "Lead AI product work as a technical product manager"
+    }
+  ]
+}

@@ -1,0 +1,161 @@
+{
+  "_note": "Synthetic data for a demo. Not real people.",
+  "items": [
+    {
+      "id": "S01",
+      "name": "Python",
+      "category": "Programming",
+      "description": "A general-purpose language used for scripting, automation and analysis.",
+      "roles": [
+        "Machine Learning Engineer",
+        "AI Application Developer",
+        "Data Engineer"
+      ]
+    },
+    {
+      "id": "S02",
+      "name": "SQL",
+      "category": "Data",
+      "description": "The standard language for querying tables in a relational database.",
+      "roles": [
+        "Data Engineer"
+      ]
+    },
+    {
+      "id": "S03",
+      "name": "Data visualization",
+      "category": "Data",
+      "description": "Turning numbers into charts and dashboards people can read at a glance.",
+      "roles": []
+    },
+    {
+      "id": "S04",
+      "name": "Statistics",
+      "category": "Data",
+      "description": "Describing and testing patterns in numbers, including averages, spread and significance.",
+      "roles": [
+        "Machine Learning Engineer"
+      ]
+    },
+    {
+      "id": "S05",
+      "name": "Machine learning",
+      "category": "AI",
+      "description": "Training models that learn patterns from examples to make predictions.",
+      "roles": [
+        "Machine Learning Engineer"
+      ]
+    },
+    {
+      "id": "S06",
+      "name": "Deep learning",
+      "category": "AI",
+      "description": "Machine learning with large neural networks, used for images, speech and text.",
+      "roles": []
+    },
+    {
+      "id": "S07",
+      "name": "Prompt engineering",
+      "category": "AI",
+      "description": "Writing clear instructions and examples so a language model gives useful answers.",
+      "roles": [
+        "AI Application Developer",
+        "Technical Product Manager, AI"
+      ]
+    },
+    {
+      "id": "S08",
+      "name": "LLM application development",
+      "category": "AI",
+      "description": "Building software that calls a language model, with tools, checks and fallbacks.",
+      "roles": [
+        "AI Application Developer"
+      ]
+    },
+    {
+      "id": "S09",
+      "name": "Cloud fundamentals",
+      "category": "Cloud",
+      "description": "Core ideas of running software on rented servers: regions, storage, scaling and cost.",
+      "roles": [
+        "Data Engineer"
+      ]
+    },
+    {
+      "id": "S10",
+      "name": "Docker and containers",
+      "category": "Cloud",
+      "description": "Packaging an application and its dependencies so it runs the same everywhere.",
+      "roles": [
+        "Machine Learning Engineer"
+      ]
+    },
+    {
+      "id": "S11",
+      "name": "REST API design",
+      "category": "Engineering",
+      "description": "Designing web endpoints that are predictable, versioned and easy to use.",
+      "roles": [
+        "AI Application Developer"
+      ]
+    },
+    {
+      "id": "S12",
+      "name": "React",
+      "category": "Engineering",
+      "description": "Building interactive web pages from reusable components.",
+      "roles": []
+    },
+    {
+      "id": "S13",
+      "name": "Software testing",
+      "category": "Engineering",
+      "description": "Writing automated tests so changes can be made without breaking things.",
+      "roles": []
+    },
+    {
+      "id": "S14",
+      "name": "Project management",
+      "category": "Business",
+      "description": "Planning work, tracking progress and keeping a project on schedule.",
+      "roles": [
+        "Technical Product Manager, AI",
+        "Warehouse Operations Coordinator"
+      ]
+    },
+    {
+      "id": "S15",
+      "name": "Stakeholder communication",
+      "category": "Business",
+      "description": "Keeping the people affected by a project informed, and listening to their needs.",
+      "roles": [
+        "Technical Product Manager, AI"
+      ]
+    },
+    {
+      "id": "S16",
+      "name": "Agile delivery",
+      "category": "Business",
+      "description": "Delivering work in short cycles with regular feedback and changes of plan.",
+      "roles": [
+        "Technical Product Manager, AI"
+      ]
+    },
+    {
+      "id": "S17",
+      "name": "Data pipelines",
+      "category": "Data",
+      "description": "Moving and cleaning information from source systems into a place where it can be used.",
+      "roles": [
+        "Data Engineer"
+      ]
+    },
+    {
+      "id": "S18",
+      "name": "Security basics",
+      "category": "Engineering",
+      "description": "Habits that keep software safe: least privilege, secret handling and input checks.",
+      "roles": []
+    }
+  ]
+}

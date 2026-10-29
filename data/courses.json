@@ -1,0 +1,115 @@
+{
+  "_note": "Synthetic data for a demo. Not real people.",
+  "items": [
+    {
+      "id": "C01",
+      "title": "SQL for Analysts",
+      "description": "Learn to query, filter and join tables to answer business questions. Practice on realistic sample tables.",
+      "skills": [
+        "S02"
+      ],
+      "level": "beginner",
+      "duration_hours": 6
+    },
+    {
+      "id": "C02",
+      "title": "Python Foundations",
+      "description": "Write your first Python programs: variables, loops, functions and files. Ends with a small automation project.",
+      "skills": [
+        "S01"
+      ],
+      "level": "beginner",
+      "duration_hours": 10
+    },
+    {
+      "id": "C03",
+      "title": "Statistics for Machine Learning",
+      "description": "Covers distributions, sampling, hypothesis tests and how to judge a model fairly. Built for people heading into model work.",
+      "skills": [
+        "S04",
+        "S05"
+      ],
+      "level": "intermediate",
+      "duration_hours": 8
+    },
+    {
+      "id": "C04",
+      "title": "Intro to Machine Learning",
+      "description": "Train and evaluate your first models in Python, from simple predictions to measuring accuracy. Hands-on exercises throughout.",
+      "skills": [
+        "S05",
+        "S01"
+      ],
+      "level": "intermediate",
+      "duration_hours": 12
+    },
+    {
+      "id": "C05",
+      "title": "Deep Learning Basics",
+      "description": "Build small neural networks and learn how they are trained. Needs prior machine learning experience.",
+      "skills": [
+        "S06",
+        "S05"
+      ],
+      "level": "advanced",
+      "duration_hours": 14
+    },
+    {
+      "id": "C06",
+      "title": "Building LLM Applications",
+      "description": "Build an application that calls a language model, exposes it through an API and handles bad answers safely.",
+      "skills": [
+        "S08",
+        "S07",
+        "S11"
+      ],
+      "level": "intermediate",
+      "duration_hours": 10
+    },
+    {
+      "id": "C07",
+      "title": "Prompt Engineering Essentials",
+      "description": "A short course on writing clear prompts, giving examples and testing the results.",
+      "skills": [
+        "S07"
+      ],
+      "level": "beginner",
+      "duration_hours": 4
+    },
+    {
+      "id": "C08",
+      "title": "Docker for Developers",
+      "description": "Package an application in a container and run it on a cloud server. Covers images, volumes and basic deployment.",
+      "skills": [
+        "S10",
+        "S09"
+      ],
+      "level": "beginner",
+      "duration_hours": 6
+    },
+    {
+      "id": "C09",
+      "title": "Data Pipelines with Python",
+      "description": "Design pipelines that load, clean and move information on a schedule. Uses Python and SQL throughout.",
+      "skills": [
+        "S17",
+        "S01",
+        "S02"
+      ],
+      "level": "intermediate",
+      "duration_hours": 10
+    },
+    {
+      "id": "C10",
+      "title": "Agile Product Management",
+      "description": "Plan a product in short cycles, work with stakeholders and prioritise a backlog. Suited to coordinators and new managers.",
+      "skills": [
+        "S14",
+        "S16",
+        "S15"
+      ],
+      "level": "beginner",
+      "duration_hours": 6
+    }
+  ]
+}
